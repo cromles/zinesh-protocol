@@ -77,3 +77,27 @@ def require_deploy_pass() -> str:
         file=sys.stderr,
     )
     sys.exit(1)
+
+
+def require_founder_email() -> str:
+    email = os.environ.get("ZINESH_FOUNDER_EMAIL", "").strip().lower()
+    if email:
+        return email
+    print(
+        "ERROR: ZINESH_FOUNDER_EMAIL is not set.\n"
+        f"       Fill in: {SECRETS_FILE}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
+def require_certbot_email() -> str:
+    email = os.environ.get("ZINESH_CERTBOT_EMAIL", "").strip()
+    if email:
+        return email
+    print(
+        "ERROR: ZINESH_CERTBOT_EMAIL is not set.\n"
+        f"       Fill in: {SECRETS_FILE}",
+        file=sys.stderr,
+    )
+    sys.exit(1)

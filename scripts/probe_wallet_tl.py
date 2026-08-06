@@ -1,12 +1,12 @@
+from deploy_common import USER, require_deploy_host, require_deploy_pass
 #!/usr/bin/env python3
 """Probe live server tl_mode + wallet tlHavale."""
 import os
 import paramiko
 
-HOST = os.environ.get("ZINESH_DEPLOY_HOST", "193.164.6.95")
+HOST = require_deploy_host()
 USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
-PASS = os.environ.get("ZINESH_DEPLOY_PASS", "")
-
+PASS = require_deploy_pass()
 PHP = r"""<?php
 require_once '/www/wwwroot/zinesh.com/api/_bootstrap.php';
 require_once '/www/wwwroot/zinesh.com/api/tl_mode_lib.php';

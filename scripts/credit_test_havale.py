@@ -1,3 +1,4 @@
+from deploy_common import USER, require_deploy_host, require_deploy_pass
 #!/usr/bin/env python3
 """One-off: credit a test havale deposit on live server."""
 from __future__ import annotations
@@ -7,9 +8,9 @@ import sys
 
 import paramiko
 
-HOST = os.environ.get("ZINESH_DEPLOY_HOST", "193.164.6.95")
+HOST = require_deploy_host()
 USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
-PASS = os.environ.get("ZINESH_DEPLOY_PASS", "")
+PASS = require_deploy_pass()
 REMOTE_API = os.environ.get("ZINESH_REMOTE_API", "/www/wwwroot/zinesh.com/api")
 
 UID = os.environ.get("ZINESH_CREDIT_UID", "1b9b932370787e42f66cddc693a1c14a")

@@ -9,10 +9,9 @@ import urllib.request
 
 import paramiko
 
-HOST = os.environ.get("ZINESH_DEPLOY_HOST", "193.164.6.95")
+HOST = require_deploy_host()
 USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
-PASSWORD = os.environ.get("ZINESH_DEPLOY_PASS", "")
-
+PASSWORD = require_deploy_pass()
 PHP = r"""<?php
 require_once '/www/wwwroot/zinesh.com/api/wallet_lib.php';
 require_once '/www/wwwroot/zinesh.com/api/oauth_lib.php';
@@ -62,6 +61,7 @@ $ctx = stream_context_create([
 $raw = @file_get_contents('https://oauth2.googleapis.com/token', false, $ctx);
 echo "token_probe_body=" . substr((string)$raw, 0, 300) . PHP_EOL;
 """
+from deploy_common import USER, require_deploy_host, require_deploy_pass
 
 
 def main() -> int:

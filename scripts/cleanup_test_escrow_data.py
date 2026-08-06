@@ -1,3 +1,4 @@
+from deploy_common import USER, require_deploy_host, require_deploy_pass
 #!/usr/bin/env python3
 """Remove E2E / test escrow rooms, messages, and stale open escrow jobs from live data."""
 import json
@@ -5,10 +6,9 @@ import os
 import sys
 import paramiko
 
-HOST = os.environ.get("ZINESH_DEPLOY_HOST", "193.164.6.95")
+HOST = require_deploy_host()
 USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
-PASS = os.environ.get("ZINESH_DEPLOY_PASS", "")
-
+PASS = require_deploy_pass()
 PHP = r"""<?php
 $api = '/www/wwwroot/zinesh.com/api';
 require_once $api . '/_bootstrap.php';

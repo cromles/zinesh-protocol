@@ -10,9 +10,9 @@ from pathlib import Path
 import paramiko
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from deploy_common import USER, require_deploy_pass
+from deploy_common import USER, require_deploy_host, require_deploy_pass, require_founder_email
 
-FOUNDER_EMAIL = "yasinkarademir147@gmail.com"
+FOUNDER_EMAIL = require_founder_email()
 
 
 def make_password() -> str:
@@ -64,7 +64,7 @@ def reset_on_host(host: str, ssh_pass: str, new_password: str) -> bool:
 
 
 def main() -> int:
-    hosts = sys.argv[1:] or ["94.154.34.48", "193.164.6.95"]
+    hosts = sys.argv[1:] or [require_deploy_host()]
     password = make_password()
     ssh_pass = require_deploy_pass()
     ok_any = False

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { UserProfile } from '../lib/userProfile';
-import { loginWithApi, markWelcomeSeen, registerWithApi, loginWithGoogleGsi, AuthTotpRequiredError, AuthHttpError, AuthLoginVerificationRequiredError, AuthPasswordLinkRequiredError, sendTotpResetCode, confirmTotpReset, FOUNDER_TOTP_RESET_EMAIL, fetchGoogleOAuthConfig, startGoogleRedirectLogin, completeGoogleOAuthTotp, completeGoogleOAuthLink } from '../lib/auth';
+import { loginWithApi, markWelcomeSeen, registerWithApi, loginWithGoogleGsi, AuthTotpRequiredError, AuthHttpError, AuthLoginVerificationRequiredError, AuthPasswordLinkRequiredError, sendTotpResetCode, confirmTotpReset, fetchGoogleOAuthConfig, startGoogleRedirectLogin, completeGoogleOAuthTotp, completeGoogleOAuthLink } from '../lib/auth';
 import { clearPendingReferralCode, normalizeReferralCode } from '../lib/referral';
 import { OAUTH_PROVIDERS } from '../lib/oauthProviders';
 import ForgotPasswordPanel from './ForgotPasswordPanel';
@@ -376,9 +376,7 @@ export default function LeadModal({
     setResendLoading(false);
   };
 
-  const showFounderTotpReset =
-    needsTotpSetup &&
-    email.trim().toLowerCase() === FOUNDER_TOTP_RESET_EMAIL;
+  const showFounderTotpReset = needsTotpSetup;
   const totpSetupSecret = parseTotpSetupSecret(totpQrUri);
 
   const handleCopyTotpUri = () => {

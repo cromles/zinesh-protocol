@@ -7,7 +7,9 @@ import socket
 
 import paramiko
 
-NEW_IP = "193.164.6.95"
+from deploy_common import require_deploy_host
+
+NEW_IP = require_deploy_host()
 HOSTS = ["www.zinesh.com", "zinesh.com", "app.zinesh.com"]
 
 
@@ -62,6 +64,7 @@ echo json_encode([
   'time' => date('c'),
 ], JSON_UNESCAPED_UNICODE);
 """
+from deploy_common import USER, require_deploy_host, require_deploy_pass
     sftp = ssh.open_sftp()
     with sftp.file("/www/wwwroot/zinesh.com/api/origin_probe.php", "w") as f:
         f.write(php)

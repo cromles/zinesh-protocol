@@ -5,12 +5,12 @@ require_once __DIR__ . '/email_lib.php';
 require_once __DIR__ . '/password_reset_lib.php';
 require_once __DIR__ . '/founder_lib.php';
 require_once __DIR__ . '/totp_lib.php';
-const ZINESH_TOTP_RESET_ALLOWED_EMAIL = 'yasinkarademir147@gmail.com';
 const ZINESH_TOTP_RESET_TTL = 900;
 const ZINESH_TOTP_RESET_MAX_ATTEMPTS = 5;
 
 function zinesh_totp_reset_email_allowed(string $email): bool {
-    return strtolower(trim($email)) === ZINESH_TOTP_RESET_ALLOWED_EMAIL;
+    $user = zinesh_find_user_by_email(strtolower(trim($email)));
+    return $user !== null && zinesh_is_founder($user);
 }
 
 function zinesh_totp_reset_require_founder_user(string $email, string $password): array {

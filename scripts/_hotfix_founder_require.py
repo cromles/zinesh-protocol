@@ -7,9 +7,9 @@ from pathlib import Path
 
 import paramiko
 
-HOST = os.environ.get("ZINESH_DEPLOY_HOST", "193.164.6.95")
+HOST = require_deploy_host()
 USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
-PASSWORD = os.environ.get("ZINESH_DEPLOY_PASS", "")
+PASSWORD = require_deploy_pass()
 ROOT = Path(__file__).resolve().parents[1]
 REMOTE_API = "/www/wwwroot/zinesh.com/api"
 
@@ -49,6 +49,7 @@ def main() -> int:
     php = r"""<?php
 require_once '/www/wwwroot/zinesh.com/api/auth.php';
 """
+from deploy_common import USER, require_deploy_host, require_deploy_pass
     # Can't require auth.php (it executes). Load same requires:
     php = r"""<?php
 require_once '/www/wwwroot/zinesh.com/api/wallet_lib.php';

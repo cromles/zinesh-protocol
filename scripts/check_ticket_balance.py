@@ -1,3 +1,4 @@
+from deploy_common import USER, require_deploy_host, require_deploy_pass
 #!/usr/bin/env python3
 """Check live wallet + completed escrow rooms for a member ticket."""
 from __future__ import annotations
@@ -8,7 +9,7 @@ import sys
 
 import paramiko
 
-HOST = os.environ.get("ZINESH_DEPLOY_HOST", "193.164.6.95")
+HOST = require_deploy_host()
 USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
 PASS = os.environ.get("ZINESH_DEPLOY_PASS", "").strip()
 TICKET = sys.argv[1] if len(sys.argv) > 1 else "ZN-SH-DUAL-27902"

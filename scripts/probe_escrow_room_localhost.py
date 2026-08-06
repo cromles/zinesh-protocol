@@ -1,13 +1,13 @@
+from deploy_common import USER, require_deploy_host, require_deploy_pass
 #!/usr/bin/env python3
 """HTTP test escrow_room via localhost on VPS (bypass Cloudflare)."""
 import json
 import os
 import paramiko
 
-HOST = os.environ.get("ZINESH_DEPLOY_HOST", "193.164.6.95")
+HOST = require_deploy_host()
 SSH_USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
-PASS = os.environ.get("ZINESH_DEPLOY_PASS", "")
-
+PASS = require_deploy_pass()
 PHP = r"""<?php
 $api = '/www/wwwroot/zinesh.com/api';
 require_once $api . '/_bootstrap.php';

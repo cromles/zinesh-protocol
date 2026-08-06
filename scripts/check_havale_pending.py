@@ -1,13 +1,13 @@
+from deploy_common import USER, require_deploy_host, require_deploy_pass
 #!/usr/bin/env python3
 """Check live havale pending + recent credits."""
 import json
 import os
 import paramiko
 
-HOST = os.environ.get("ZINESH_DEPLOY_HOST", "193.164.6.95")
+HOST = require_deploy_host()
 USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
-PASS = os.environ.get("ZINESH_DEPLOY_PASS", "")
-
+PASS = require_deploy_pass()
 PHP = r"""<?php
 declare(strict_types=1);
 require_once '/www/wwwroot/zinesh.com/api/_bootstrap.php';

@@ -1,14 +1,15 @@
 """Add HTTPS vhost for app.zinesh.com and obtain certificate."""
 from __future__ import annotations
 
-import os
 import sys
 
 import paramiko
 
-HOST = os.environ.get("ZINESH_DEPLOY_HOST", "193.164.6.95")
-USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
-PASSWORD = os.environ.get("ZINESH_DEPLOY_PASS", "")
+from deploy_common import USER, require_certbot_email, require_deploy_host, require_deploy_pass
+
+HOST = require_deploy_host()
+PASSWORD = require_deploy_pass()
+CERTBOT_EMAIL = require_certbot_email()
 REMOTE_ROOT = "/www/wwwroot/app.zinesh.com"
 
 APP_CONF = f"""server {{
@@ -88,9 +89,9 @@ def main() -> int:
 
         code, out, err = run(
             ssh,
-            "certbot certonly --nginx -d app.zinesh.com --non-interactive --agree-tos -m melisa.karademir14@gmail.com || certbot certonly --webroot -w "
+            f"certbot certonly --nginx -d app.zinesh.com --non-interactive --agree-tos -m {CERTBOT_EMAIL} || certbot certonly --webroot -w "
             + REMOTE_ROOT
-            + " -d app.zinesh.com --non-interactive --agree-tos -m melisa.karademir14@gmail.com",
+            + f" -d app.zinesh.com --non-interactive --agree-tos -m {CERTBOT_EMAIL}",
         )
         print(out)
         if err:

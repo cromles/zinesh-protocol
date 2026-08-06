@@ -1,3 +1,4 @@
+from deploy_common import USER, require_deploy_host, require_deploy_pass
 #!/usr/bin/env python3
 """HTTP-level escrow_create probe with real session."""
 from __future__ import annotations
@@ -9,9 +10,9 @@ import urllib.request
 
 import paramiko
 
-HOST = os.environ.get("ZINESH_DEPLOY_HOST", "193.164.6.95")
+HOST = require_deploy_host()
 USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
-PASS = os.environ.get("ZINESH_DEPLOY_PASS", "")
+PASS = require_deploy_pass()
 UID = "1b9b932370787e42f66cddc693a1c14a"
 
 PHP = r"""<?php

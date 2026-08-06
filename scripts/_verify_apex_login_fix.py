@@ -1,3 +1,4 @@
+from deploy_common import USER, require_deploy_host, require_deploy_pass
 """Verify apex CORS + live bundle apiOrigin fix."""
 from __future__ import annotations
 
@@ -6,11 +7,9 @@ import re
 
 import paramiko
 
-HOST = os.environ.get("ZINESH_DEPLOY_HOST", "193.164.6.95")
+HOST = require_deploy_host()
 USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
-PASSWORD = os.environ.get("ZINESH_DEPLOY_PASS", "")
-
-
+PASSWORD = require_deploy_pass()
 def main() -> int:
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())

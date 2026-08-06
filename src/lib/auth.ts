@@ -885,8 +885,6 @@ export async function changePassword(
   };
 }
 
-export const FOUNDER_TOTP_RESET_EMAIL = 'yasinkarademir147@gmail.com';
-
 export async function sendTotpResetCode(
   email: string,
   password: string

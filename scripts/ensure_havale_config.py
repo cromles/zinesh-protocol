@@ -7,9 +7,9 @@ from pathlib import Path
 
 import paramiko
 
-HOST = os.environ.get("ZINESH_DEPLOY_HOST", "193.164.6.95")
+HOST = require_deploy_host()
 USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
-PASSWORD = os.environ.get("ZINESH_DEPLOY_PASS", "")
+PASSWORD = require_deploy_pass()
 REMOTE_API = os.environ.get("ZINESH_REMOTE_API", "/www/wwwroot/zinesh.com/api")
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -43,6 +43,7 @@ require_once $apiDir . '/tl_mode_lib.php';
 echo 'havale_enabled=' . (zinesh_havale_enabled() ? '1' : '0') . "\n";
 echo 'iban_len=' . strlen(zinesh_havale_iban_normalized()) . "\n";
 """
+from deploy_common import USER, require_deploy_host, require_deploy_pass
 
 
 def main() -> int:

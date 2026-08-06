@@ -8,9 +8,9 @@ from pathlib import Path
 import paramiko
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from deploy_common import USER, require_deploy_host, require_deploy_pass
+from deploy_common import USER, require_deploy_host, require_deploy_pass, require_founder_email
 
-FOUNDER_EMAIL = "yasinkarademir147@gmail.com"
+FOUNDER_EMAIL = require_founder_email()
 
 PHP = r"""<?php
 require '/www/wwwroot/zinesh.com/api/wallet_lib.php';

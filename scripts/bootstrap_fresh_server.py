@@ -192,7 +192,7 @@ def main() -> int:
             if line:
                 print(line)
 
-        print("Bootstrap OK — DNS'i 94.154.34.48'e yönlendirin (www + app A kayıtları)")
+        print("Bootstrap OK — DNS A kayıtlarını sunucu IP'nize yönlendirin (www + app).")
         return 0
     finally:
         ssh.close()

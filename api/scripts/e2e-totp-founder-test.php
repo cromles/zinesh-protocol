@@ -26,7 +26,13 @@ function assert_totp(string $label, bool $ok): void {
 
 echo "=== Kurucu TOTP E2E ===\n";
 
-$founderEmail = 'yasinkarademir147@gmail.com';
+$cfg = zinesh_config();
+$founderEmails = $cfg['founder_emails'] ?? [];
+$founderEmail = is_array($founderEmails) ? trim((string)($founderEmails[0] ?? '')) : '';
+if ($founderEmail === '') {
+    echo "SKIP: config founder_emails boş — api/config.local.php içinde tanımlayın.\n";
+    exit(0);
+}
 $founder = zinesh_find_user_by_email($founderEmail);
 assert_totp('Kurucu hesap bulundu', $founder !== null);
 if ($founder) {

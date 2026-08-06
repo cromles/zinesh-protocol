@@ -5,10 +5,9 @@ import os
 
 import paramiko
 
-HOST = os.environ.get("ZINESH_DEPLOY_HOST", "193.164.6.95")
+HOST = require_deploy_host()
 USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
-PASSWORD = os.environ.get("ZINESH_DEPLOY_PASS", "")
-
+PASSWORD = require_deploy_pass()
 PHP = r"""<?php
 $audit = json_decode((string)file_get_contents('/www/server/zinesh-data/audit_log.json'), true);
 $n = 0;
@@ -23,6 +22,7 @@ foreach ((is_array($audit) ? $audit : []) as $r) {
   if (++$n >= 25) break;
 }
 """
+from deploy_common import USER, require_deploy_host, require_deploy_pass
 
 
 def main() -> int:

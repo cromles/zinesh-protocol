@@ -1,15 +1,15 @@
 """Restore app.zinesh.com vhost and remove hostname from axium config."""
 from __future__ import annotations
 
-import os
 import re
 import sys
 
 import paramiko
 
-HOST = os.environ.get("ZINESH_DEPLOY_HOST", "193.164.6.95")
-USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
-PASSWORD = os.environ.get("ZINESH_DEPLOY_PASS", "")
+from deploy_common import USER, require_deploy_host, require_deploy_pass
+
+HOST = require_deploy_host()
+PASSWORD = require_deploy_pass()
 REMOTE_ROOT = "/www/wwwroot/app.zinesh.com"
 
 APP_CONF = f"""server {{

@@ -32,7 +32,9 @@ return [
     // ],
 
     /** Kurucu paneli — AR-GE Rezervi yönetimi */
-    // 'founder_emails' => ['kurucu@zinesh.com'],
+    /**
+     * Kurucu hesap(lar) — TOTP sıfırlama ve kurucu paneli için zorunlu (canlıda doldurun).
+     * 'founder_emails' => ['kurucu@sirket.com'],
     // 'founder_uids' => ['abc123uid'],
 
     /**

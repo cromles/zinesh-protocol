@@ -1,3 +1,4 @@
+from deploy_common import USER, require_deploy_host, require_deploy_pass
 #!/usr/bin/env python3
 """Inspect live PHP errors and simulate wallet.php bootstrap for escrow_create."""
 from __future__ import annotations
@@ -7,10 +8,9 @@ import sys
 
 import paramiko
 
-HOST = os.environ.get("ZINESH_DEPLOY_HOST", "193.164.6.95")
+HOST = require_deploy_host()
 USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
-PASS = os.environ.get("ZINESH_DEPLOY_PASS", "")
-
+PASS = require_deploy_pass()
 PHP = r"""<?php
 declare(strict_types=1);
 $api = '/www/wwwroot/zinesh.com/api';
