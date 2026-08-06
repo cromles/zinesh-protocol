@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8">
+    <script>
+      /* Apex host API POST'larını bozar — www'ye al. */
+      if (location.hostname === 'zinesh.com') {
+        location.replace('https://www.zinesh.com' + location.pathname + location.search + location.hash);
+      }
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#06060a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Zinesh">
+
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" href="/favicon-48x48.png" sizes="48x48">
+    <link rel="icon" type="image/png" href="/favicon-192x192.png" sizes="192x192">
+    <link rel="icon" type="image/png" href="/favicon-512x512.png" sizes="512x512">
+    <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="192x192">
+    <link rel="manifest" href="/site.webmanifest">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Konsol / Firebase (lazy yükleme) — dns-prefetch; landing'de preconnect unused sayılır -->
+    <link rel="dns-prefetch" href="https://firebase.googleapis.com">
+    <link rel="dns-prefetch" href="https://firestore.googleapis.com">
+    <link rel="dns-prefetch" href="https://identitytoolkit.googleapis.com">
+
+    <title>Zinesh | Güvenli Ödeme ve Emanet (Escrow)</title>
+    <meta
+      name="description"
+      content="Zinesh, alıcı ve satıcı arasındaki parayı güvenli kasada tutan üçüncü taraf emanet sistemidir. Onay sonrası ödeme; itirazda hakem heyeti."
+   >
+    <meta
+      name="keywords"
+      content="Zinesh, güvenli ödeme, emanet, escrow, alıcı satıcı, hakemlik, itiraz, freelance, dijital varlık"
+   >
+    <meta name="author" content="Zinesh Protocol">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://www.zinesh.com/">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Zinesh">
+    <meta property="og:locale" content="tr_TR">
+    <meta property="og:url" content="https://www.zinesh.com/">
+    <meta property="og:title" content="Zinesh | Güvenli Ödeme ve Emanet">
+    <meta
+      property="og:description"
+      content="Alıcı kasaya yatırır, satıcı teslim eder. Onay sonrası ödeme; itirazda tarafsız hakem heyeti."
+   >
+    <meta property="og:image" content="https://www.zinesh.com/google-logo.png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:image:alt" content="Zinesh — kare çerçeve içinde Z">
+    <meta property="og:image:type" content="image/png">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="https://www.zinesh.com/google-logo.png">
+    <meta name="twitter:site" content="@zineshprotocol">
+    <meta name="twitter:title" content="Zinesh | Güvenli Ödeme ve Emanet">
+    <meta
+      name="twitter:description"
+      content="Üçüncü taraf emanet: alıcı ve satıcıyı aynı kasa koruması altında buluşturur."
+   >
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://www.zinesh.com/#organization",
+            "name": "Zinesh",
+            "alternateName": "Zinesh Protocol",
+            "url": "https://www.zinesh.com/",
+            "logo": {
+              "@type": "ImageObject",
+              "@id": "https://www.zinesh.com/#logo",
+              "url": "https://www.zinesh.com/google-logo.png",
+              "contentUrl": "https://www.zinesh.com/google-logo.png",
+              "width": 512,
+              "height": 512,
+              "caption": "Zinesh markası — kare çerçeve içinde Z"
+            },
+            "image": {
+              "@type": "ImageObject",
+              "url": "https://www.zinesh.com/google-logo.png",
+              "width": 512,
+              "height": 512
+            },
+            "description": "Zinesh güven protokolüdür — emanet kasası ve hakemlik ile sözü korur.",
+            "sameAs": [
+              "https://x.com/zineshprotocol",
+              "https://t.me/zinesh1",
+              "https://www.instagram.com/zinesh.protocol"
+            ],
+            "founder": {
+              "@type": "Person",
+              "name": "Yasin Karademir",
+              "jobTitle": "Kurucu",
+              "url": "https://www.zinesh.com/kurucu/"
+            },
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "email": "noreply@zinesh.com",
+              "contactType": "customer support",
+              "availableLanguage": ["Turkish", "English"]
+            }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://www.zinesh.com/#website",
+            "url": "https://www.zinesh.com/",
+            "name": "Zinesh",
+            "description": "Zinesh güven protokolüdür — emanet kasası ve hakemlik ile sözü korur.",
+            "publisher": { "@id": "https://www.zinesh.com/#organization" },
+            "inLanguage": "tr-TR"
+          }
+        ]
+      }
+    </script>
+
+    <style>
+      html {
+        overflow-x: hidden;
+        max-width: 100%;
+      }
+      body {
+        margin: 0;
+        font-family: 'Sora', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          'Helvetica Neue', Arial, sans-serif;
+        background: #020203;
+        color: #f4f4f5;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+        max-width: 100%;
+        width: 100%;
+      }
+      #root {
+        min-height: 100vh;
+        overflow-x: hidden;
+        max-width: 100%;
+        width: 100%;
+      }
+      /* JS yüklenmeden önce crawler / no-script kullanıcıları için; React mount sonrası değişir */
+      .seo-prerender {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 1.5rem 1.25rem 1.25rem;
+        box-sizing: border-box;
+      }
+      .seo-prerender__intro {
+        max-width: 40rem;
+        margin: 0 auto;
+        text-align: center;
+        padding: 2rem 0 1rem;
+      }
+      .seo-prerender__intro h1 {
+        margin: 0 0 0.75rem;
+        font-size: clamp(1.35rem, 4vw, 1.75rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: #fafafa;
+      }
+      .seo-prerender__intro p {
+        margin: 0;
+        font-size: 0.9rem;
+        line-height: 1.65;
+        color: #a1a1aa;
+      }
+      .seo-prerender__footer {
+        margin-top: auto;
+        padding-top: 1.25rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .seo-prerender__footer nav {
+        max-width: 48rem;
+        margin: 0 auto;
+      }
+      .seo-prerender__label {
+        display: block;
+        margin-bottom: 0.65rem;
+        font-size: 0.65rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #71717a;
+        text-align: center;
+      }
+      .seo-prerender__links {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.4rem 0.65rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .seo-prerender__links a {
+        font-size: 0.75rem;
+        color: #c084fc;
+        text-decoration: none;
+        padding: 0.2rem 0.45rem;
+        border-radius: 0.25rem;
+      }
+      .seo-prerender__links a:hover {
+        color: #e9d5ff;
+        background: rgba(192, 132, 252, 0.08);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="seo-prerender">
+        <header class="seo-prerender__intro">
+          <h1>Zinesh Güven Protokolü</h1>
+          <p>
+            Tanımadığınız kişilerle çalışırken paranız güvenli kasada bekler.
+            İş bitince onaylarsınız; anlaşmazlıkta bağımsız hakemler karar verir.
+          </p>
+        </header>
+        <footer class="seo-prerender__footer">
+          <nav aria-label="Zinesh site haritası">
+            <span class="seo-prerender__label">Keşfet</span>
+            <ul class="seo-prerender__links">
+              <li><a href="/nedir/">Zinesh Nedir?</a></li>
+              <li><a href="/guven-protokolu/">Güven Protokolü</a></li>
+              <li><a href="/hakemlik/">Hakemlik</a></li>
+              <li><a href="/komisyonlar/">Komisyonlar</a></li>
+              <li><a href="/guven-protokolu/">Güven Protokolü</a></li>
+              <li><a href="/whitepaper/">Whitepaper</a></li>
+              <li><a href="/teknik-dokuman/">Teknik Doküman</a></li>
+              <li><a href="/sss/">SSS</a></li>
+              <li><a href="/blog/">Blog</a></li>
+            </ul>
+          </nav>
+        </footer>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,660 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Sora", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Sora", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "Cascadia Code", "Segoe UI Mono", Menlo, Consolas,
+    monospace;
+
+  /* Custom glow colors matching our premium theme guidelines */
+  --color-web3: #0ea5e9; /* Sky blue represented in Web3 */
+  --color-real: #f97316; /* Orange represented in real world */
+  --color-zinesh-purple: #a855f7; /* Purple represented in Zinesh */
+  --color-zinesh-light: #faf5ff; /* Soft white/purple tint */
+}
+
+@layer base {
+  html {
+    max-width: 100%;
+    scroll-padding-top: 0;
+    scroll-snap-type: none;
+    scroll-behavior: auto;
+    overflow-x: clip;
+    overflow-y: scroll;
+  }
+
+  body {
+    @apply font-sans bg-[#020203] text-zinc-100 antialiased selection:bg-purple-500/30 selection:text-white;
+    max-width: 100%;
+    width: 100%;
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+
+  #root {
+    max-width: 100%;
+    width: 100%;
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+
+  .teknik-dokuman-page a {
+    @apply no-underline;
+    color: inherit;
+  }
+
+  .teknik-dokuman-page nav a {
+    @apply text-zinc-500 hover:text-white;
+  }
+
+  .teknik-dokuman-page nav a.text-white {
+    color: #fff;
+  }
+
+  /* Disable Chrome/Safari/Edge/Opera/Firefox auto number spinner/input controls */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type=number] {
+    -moz-appearance: textfield;
+  }
+
+  /* iOS: 16px+ input font prevents auto-zoom on focus */
+  @media (max-width: 640px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+
+}
+
+@layer utilities {
+  /*
+   * Important: never set overflow-x:hidden on sections.
+   * CSS pairs "hidden" with "visible" → overflow-y becomes auto,
+   * and iOS then captures finger scrolls inside the section (nested scroll).
+   * Use clip on X only so the document remains the only vertical scroller.
+   */
+  .section-screen {
+    box-sizing: border-box;
+    min-height: 0;
+    display: block;
+    overflow-x: clip;
+    overflow-y: visible;
+    overscroll-behavior: auto;
+    scroll-snap-align: none;
+    scroll-snap-stop: normal;
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+
+  #hero.section-screen {
+    min-height: 0;
+    padding-top: calc(4.25rem + env(safe-area-inset-top, 0px));
+    padding-bottom: 2.25rem;
+  }
+
+  @media (min-width: 640px) {
+    .section-screen {
+      padding-top: 3.75rem;
+      padding-bottom: 3.75rem;
+    }
+
+    #hero.section-screen {
+      padding-top: calc(4.75rem + env(safe-area-inset-top, 0px));
+      padding-bottom: 2.5rem;
+    }
+  }
+
+  .section-screen-inner {
+    width: 100%;
+    margin-inline: auto;
+    flex: 0 1 auto;
+    padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+  }
+
+  .safe-pad-x {
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  }
+
+  @media (min-width: 640px) {
+    .safe-pad-x {
+      padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+      padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+    }
+  }
+
+  .safe-pad-b {
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .safe-pad-t {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Sticky header + mobile quick-nav ≈ 7.5–9rem on phones */
+  .console-scroll-target {
+    scroll-margin-top: calc(56px + env(safe-area-inset-top, 0px) + 3.5rem);
+  }
+
+  .notification-bar-spacer {
+    height: calc(56px + env(safe-area-inset-top, 0px));
+  }
+
+  .escrow-stable-scroll {
+    overflow-anchor: none;
+  }
+
+  #alpha-portal-root main,
+  #alpha-portal-root .flex-1.max-w-7xl {
+    overflow-anchor: none;
+  }
+
+  @media (min-width: 1024px) {
+    .console-scroll-target {
+      scroll-margin-top: calc(56px + env(safe-area-inset-top, 0px) + 1rem);
+    }
+  }
+
+  .mobile-quick-nav {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .mobile-quick-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  @keyframes notificationBarBellShake {
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+    15% {
+      transform: rotate(-14deg);
+    }
+    30% {
+      transform: rotate(12deg);
+    }
+    45% {
+      transform: rotate(-10deg);
+    }
+    60% {
+      transform: rotate(8deg);
+    }
+    75% {
+      transform: rotate(-4deg);
+    }
+  }
+
+  .notification-bar-bell-shake {
+    animation: notificationBarBellShake 0.55s ease-in-out infinite;
+  }
+
+  @keyframes notificationBarPanelInDesktop {
+    from {
+      transform: translateX(100%);
+      opacity: 0.6;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes notificationBarPanelInMobile {
+    from {
+      transform: translateY(100%);
+      opacity: 0.6;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .notification-bar-panel {
+    animation: notificationBarPanelInMobile 0.28s ease-out;
+  }
+
+  @media (min-width: 768px) {
+    .notification-bar-panel {
+      animation: notificationBarPanelInDesktop 0.28s ease-out;
+    }
+  }
+
+  /* legacy alias */
+  .eslesme-sinyal-bell-shake {
+    animation: notificationBarBellShake 0.55s ease-in-out infinite;
+  }
+
+  @keyframes zineshReveal {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes zineshHeroIn {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes zineshHeroGlow {
+    0%,
+    100% {
+      opacity: 0.45;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.7;
+      transform: scale(1.06);
+    }
+  }
+
+  @keyframes zineshFlowPulse {
+    0%,
+    100% {
+      opacity: 0.35;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  .hero-enter {
+    opacity: 0;
+    animation: zineshHeroIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .hero-enter-1 {
+    animation-delay: 0.05s;
+  }
+  .hero-enter-2 {
+    animation-delay: 0.18s;
+  }
+  .hero-enter-3 {
+    animation-delay: 0.32s;
+  }
+  .hero-enter-4 {
+    animation-delay: 0.46s;
+  }
+  .hero-enter-5 {
+    animation-delay: 0.6s;
+  }
+  .hero-enter-6 {
+    animation-delay: 0.74s;
+  }
+  .hero-enter-7 {
+    animation-delay: 0.88s;
+  }
+  .hero-enter-8 {
+    animation-delay: 1.02s;
+  }
+
+  .hero-glow {
+    animation: zineshHeroGlow 8s ease-in-out infinite;
+  }
+
+  .hero-flow-dot {
+    animation: zineshFlowPulse 2.4s ease-in-out infinite;
+  }
+
+  .hero-flow-dot-2 {
+    animation-delay: 0.4s;
+  }
+
+  .hero-flow-dot-3 {
+    animation-delay: 0.8s;
+  }
+
+  /* —— Unified landing canvas —— */
+  .home-canvas {
+    background: #040408;
+  }
+
+  .home-ambient {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.55;
+  }
+
+  .home-ambient-a {
+    top: -8%;
+    right: -12%;
+    width: min(560px, 70vw);
+    height: min(560px, 70vw);
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.22) 0%, transparent 68%);
+  }
+
+  .home-ambient-b {
+    bottom: 12%;
+    left: -15%;
+    width: min(480px, 65vw);
+    height: min(480px, 65vw);
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.12) 0%, transparent 70%);
+  }
+
+  .home-grid-fade {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: linear-gradient(to bottom, black 0%, transparent 85%);
+    opacity: 0.35;
+  }
+
+  .home-preview-glass {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+    backdrop-filter: blur(12px);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+      0 24px 48px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  .home-journey-line {
+    min-height: calc(100% - 0.5rem);
+  }
+
+  .home-journey-card {
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .home-journey-step:hover .home-journey-card {
+    border-color: rgba(139, 92, 246, 0.22);
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .home-cta-band {
+    background: rgba(255, 255, 255, 0.02);
+    box-shadow: 0 0 80px -20px rgba(139, 92, 246, 0.25);
+  }
+
+  /* —— Starfield —— */
+  .home-starfield {
+    z-index: 0;
+  }
+
+  @keyframes homeStarTwinkle {
+    0%,
+    100% {
+      opacity: var(--star-base-opacity, 0.35);
+      transform: scale(1);
+    }
+    50% {
+      opacity: min(1, calc(var(--star-base-opacity, 0.35) + 0.45));
+      transform: scale(1.35);
+    }
+  }
+
+  .home-star-dot {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(200, 210, 255, 0.4) 100%);
+    box-shadow: 0 0 4px rgba(167, 139, 250, 0.35);
+    animation: homeStarTwinkle ease-in-out infinite;
+    will-change: opacity, transform;
+  }
+
+  @keyframes homeShootingStar {
+    0%,
+    78%,
+    100% {
+      opacity: 0;
+      transform: translateX(0px) translateY(0px) rotate(-38deg) scaleX(0.2);
+    }
+    82% {
+      opacity: 0;
+    }
+    84% {
+      opacity: 1;
+      transform: translateX(0px) translateY(0px) rotate(-38deg) scaleX(1);
+    }
+    92% {
+      opacity: 0;
+      transform: translateX(-220px) translateY(180px) rotate(-38deg) scaleX(0.4);
+    }
+  }
+
+  .home-shooting-star {
+    position: absolute;
+    width: 100px;
+    height: 1.5px;
+    border-radius: 999px;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(196, 181, 253, 0.5) 35%,
+      transparent 100%
+    );
+    box-shadow: 0 0 8px rgba(167, 139, 250, 0.5);
+    opacity: 0;
+    animation: homeShootingStar ease-out infinite;
+    will-change: transform, opacity;
+  }
+
+  .home-shooting-star-1 {
+    top: 8%;
+    right: 18%;
+    animation-duration: 9s;
+    animation-delay: 1s;
+  }
+
+  .home-shooting-star-2 {
+    top: 22%;
+    right: 42%;
+    width: 80px;
+    animation-duration: 11s;
+    animation-delay: 4.5s;
+  }
+
+  .home-shooting-star-3 {
+    top: 5%;
+    right: 65%;
+    width: 70px;
+    animation-duration: 13s;
+    animation-delay: 8s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .home-star-dot,
+    .home-shooting-star {
+      animation: none !important;
+      opacity: var(--star-base-opacity, 0.25);
+    }
+
+    .home-shooting-star {
+      display: none;
+    }
+
+    .home-ambient {
+      animation: none;
+    }
+  }
+
+  /*
+   * LightningCSS collapses translate(0px, 0px) → translate(0) (1-arg),
+   * which breaks interpolation against translate(x, y). Use translateX/Y only.
+   */
+  @keyframes zineshStarTwinkleMove {
+    0% {
+      opacity: 0.2;
+      transform: translateX(0px) translateY(0px) scale(0.55);
+    }
+    25% {
+      opacity: 1;
+      transform: translateX(calc(var(--star-dx, 10px) * 0.4))
+        translateY(calc(var(--star-dy, -10px) * 0.4)) scale(1.85);
+    }
+    50% {
+      opacity: 0.55;
+      transform: translateX(var(--star-dx, 10px)) translateY(var(--star-dy, -10px))
+        scale(1.05);
+    }
+    75% {
+      opacity: 0.95;
+      transform: translateX(calc(var(--star-dx, 10px) * 0.55))
+        translateY(calc(var(--star-dy, -10px) * -0.35)) scale(1.55);
+    }
+    100% {
+      opacity: 0.2;
+      transform: translateX(0px) translateY(0px) scale(0.55);
+    }
+  }
+
+  @keyframes zineshMedallionPulse {
+    0%,
+    100% {
+      box-shadow: 0 0 28px rgba(168, 85, 247, 0.2), 0 0 56px rgba(56, 189, 248, 0.08);
+    }
+    50% {
+      box-shadow: 0 0 44px rgba(168, 85, 247, 0.42), 0 0 80px rgba(56, 189, 248, 0.18);
+    }
+  }
+
+  .zinesh-star {
+    animation: zineshStarTwinkleMove var(--star-drift, 3.2s) ease-in-out infinite;
+    animation-delay: var(--star-delay, 0s);
+    will-change: transform, opacity;
+  }
+
+  .zinesh-medallion-pulse {
+    animation: zineshMedallionPulse 3.6s ease-in-out infinite;
+  }
+
+  @keyframes zineshMenuIn {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .reveal-on-scroll {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  .reveal-on-scroll.is-visible {
+    animation: zineshReveal 0.4s ease-out forwards;
+  }
+
+  .menu-pop-in {
+    animation: zineshMenuIn 0.15s ease-out;
+  }
+
+  @keyframes eslesmeSinyalBellShake {
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+    15% {
+      transform: rotate(-14deg);
+    }
+    30% {
+      transform: rotate(12deg);
+    }
+    45% {
+      transform: rotate(-10deg);
+    }
+    60% {
+      transform: rotate(8deg);
+    }
+    75% {
+      transform: rotate(-4deg);
+    }
+  }
+
+  .eslesme-sinyal-bell-shake {
+    animation: eslesmeSinyalBellShake 0.85s ease-in-out infinite;
+    transform-origin: top center;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .eslesme-sinyal-bell-shake,
+    .notification-bar-bell-shake {
+      animation: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    .section-screen {
+      height: auto;
+      max-height: none;
+    }
+
+    #hero.section-screen {
+      min-height: 0;
+    }
+
+    .reveal-on-scroll {
+      opacity: 1;
+      transform: none;
+    }
+
+    .reveal-on-scroll.is-visible,
+    .menu-pop-in,
+    .hero-enter,
+    .hero-glow,
+    .hero-flow-dot,
+    .zinesh-medallion-pulse {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    /* Marka logosu yıldızları: kullanıcıya görünür kalsın (hafif versiyon) */
+    .zinesh-star {
+      animation-duration: calc(var(--star-drift, 3.2s) * 1.8) !important;
+      opacity: 0.7;
+    }
+  }
+}
+
+/* Custom background grid styling under the Immersive UI specification */
+.bg-grid-glow {
+  background-image: 
+    radial-gradient(circle at 15% 45%, rgba(37, 99, 235, 0.12) 0%, transparent 50%),
+    radial-gradient(circle at 85% 45%, rgba(234, 88, 12, 0.12) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.10) 0%, transparent 65%),
+    linear-gradient(to bottom, rgba(2, 2, 3, 0.8), rgba(2, 2, 3, 1));
+}
+
+/* Glassmorphism utility card styling matching the Immersive UI theme */
+.glass-panel {
+  @apply bg-white/5 backdrop-blur-md border border-white/10 shadow-xl hover:bg-white/[0.08] transition-all duration-300;
+}

@@ -1,0 +1,37 @@
+node_modules/
+.env
+.env.*
+!.env.example
+
+# Yerel sunucu giriş bilgileri (asla commit etme)
+secrets/deploy.local.env
+secrets/*.local.env
+!secrets/*.example.env
+
+dist-ssr/
+
+.vscode/
+
+api/*.bak
+api/*.tmp
+api/fizi_market_lib.php.bak-*
+api/config.local.php
+api/secrets.json
+api/data/*.json
+api/data/users.json
+
+*.bak
+*.bak-*
+server.js.tmp
+
+backups/
+
+*.log
+*.tar.gz
+
+/www/server/zinesh-data/
+
+# Python deploy yardımcıları
+scripts/__pycache__/
+*.pyc
+__pycache__/

@@ -1,0 +1,129 @@
+{
+  "$schema": "https://api.studio.google.com/schemas/firebase-blueprint.v1.json",
+  "collections": {
+    "leads": {
+      "description": "Collection for tracking early access registrations",
+      "fields": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "email": {
+          "type": "string",
+          "required": true
+        },
+        "role": {
+          "type": "string",
+          "required": true
+        },
+        "ticketNumber": {
+          "type": "string",
+          "required": true
+        },
+        "createdAt": {
+          "type": "timestamp"
+        }
+      }
+    },
+    "subscribers": {
+      "description": "Collection for tracking newsletter subscribers",
+      "fields": {
+        "email": {
+          "type": "string",
+          "required": true
+        },
+        "createdAt": {
+          "type": "timestamp"
+        }
+      }
+    },
+    "users": {
+      "description": "Collection for Zinesh registered users and their economic reputation attributes",
+      "fields": {
+        "uid": {
+          "type": "string",
+          "required": true
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "email": {
+          "type": "string",
+          "required": true
+        },
+        "role": {
+          "type": "string",
+          "required": true
+        },
+        "ticketNumber": {
+          "type": "string",
+          "required": true
+        },
+        "trustScore": {
+          "type": "number",
+          "required": true
+        },
+        "fiziBalance": {
+          "type": "number",
+          "required": true
+        },
+        "walletAddress": {
+          "type": "string",
+          "required": true
+        },
+        "createdAt": {
+          "type": "timestamp"
+        }
+      }
+    },
+    "contracts": {
+      "description": "Collection for tracking active, disputed, and completed escrow contracts",
+      "fields": {
+        "id": {
+          "type": "string",
+          "required": true
+        },
+        "title": {
+          "type": "string",
+          "required": true
+        },
+        "description": {
+          "type": "string",
+          "required": true
+        },
+        "buyer": {
+          "type": "string",
+          "required": true
+        },
+        "supplier": {
+          "type": "string",
+          "required": true
+        },
+        "value": {
+          "type": "number",
+          "required": true
+        },
+        "collateral": {
+          "type": "number",
+          "required": true
+        },
+        "status": {
+          "type": "string",
+          "required": true
+        },
+        "deliveryDate": {
+          "type": "string",
+          "required": true
+        },
+        "category": {
+          "type": "string",
+          "required": true
+        },
+        "createdAt": {
+          "type": "timestamp"
+        }
+      }
+    }
+  }
+}

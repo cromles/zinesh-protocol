@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" href="/favicon-48x48.png" sizes="48x48">
+    <link rel="icon" type="image/png" href="/favicon-192x192.png" sizes="192x192">
+    <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="192x192">
+    <title>Zinesh Nedir? — Güven Protokolü ve Hizmet İşlerinde Güvence</title>
+    <meta
+      name="description"
+      content="Zinesh nedir? Tanımadığınız biriyle iş yaparken güveni kurallara emanet eden bir protokol. Nasıl çalışır, neden var?"
+   >
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://www.zinesh.com/nedir/">
+    <meta property="og:type" content="article">
+    <meta property="og:locale" content="tr_TR">
+    <meta property="og:url" content="https://www.zinesh.com/nedir/">
+    <meta property="og:title" content="Zinesh Nedir?">
+    <meta
+      property="og:description"
+      content="İnternet insanları birbirine yaklaştırdı ama güven sorununu çözmedi. Zinesh, birbirine güvenmek zorunda kalmadan çalışmayı amaçlayan bir güven protokolüdür."
+   >
+    <meta property="og:image" content="https://www.zinesh.com/google-logo.png">
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #030307;
+        --card: #09090e;
+        --border: rgba(255, 255, 255, 0.08);
+        --text: #e4e4e7;
+        --muted: #a1a1aa;
+        --purple: #c084fc;
+        --amber: #fbbf24;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.75;
+      }
+      a { color: var(--purple); }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+      .badge {
+        display: inline-block;
+        font-size: 0.7rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--purple);
+        border: 1px solid rgba(192, 132, 252, 0.25);
+        background: rgba(192, 132, 252, 0.08);
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        margin-bottom: 1rem;
+      }
+      h1 {
+        font-size: clamp(1.8rem, 5vw, 2.45rem);
+        line-height: 1.15;
+        margin: 0 0 1.25rem;
+        color: #fff;
+        letter-spacing: -0.02em;
+      }
+      h2 {
+        font-size: 1.2rem;
+        margin: 2.25rem 0 1rem;
+        color: #fff;
+      }
+      p { color: var(--muted); margin: 0 0 1rem; font-size: 0.98rem; }
+      p:last-child { margin-bottom: 0; }
+      .questions {
+        margin: 1.5rem 0;
+        padding: 1.15rem 1.25rem;
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        background: var(--card);
+      }
+      .questions p {
+        color: #d4d4d8;
+        font-style: italic;
+        margin-bottom: 0.75rem;
+      }
+      .questions p:last-child { margin-bottom: 0; }
+      .highlight {
+        margin: 1.5rem 0;
+        padding: 1.15rem 1.25rem;
+        border-left: 3px solid var(--purple);
+        background: rgba(192, 132, 252, 0.06);
+        border-radius: 0 0.75rem 0.75rem 0;
+      }
+      .highlight p { color: #e4e4e7; margin-bottom: 0.65rem; }
+      .summary {
+        margin-top: 2rem;
+        padding: 1.35rem 1.5rem;
+        border: 1px solid rgba(192, 132, 252, 0.2);
+        background: rgba(192, 132, 252, 0.06);
+        border-radius: 1rem;
+      }
+      .summary p { color: #e9d5ff; margin-bottom: 0.5rem; }
+      .summary p:last-child { color: #fff; font-weight: 600; margin-bottom: 0; }
+      .cta {
+        display: inline-flex;
+        margin-top: 2rem;
+        padding: 0.9rem 1.4rem;
+        border-radius: 999px;
+        background: #fff;
+        color: #000;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .cta:hover { background: #e4e4e7; }
+      .links { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2rem; }
+      .links a {
+        text-decoration: none;
+        font-size: 0.85rem;
+        padding: 0.5rem 0.9rem;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+      footer {
+        margin-top: 3rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border);
+        font-size: 0.8rem;
+        color: #71717a;
+      }
+    </style>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Zinesh nedir?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Zinesh, insanların birbirlerine güvenmek zorunda kalmadan birlikte çalışabilmelerini sağlayan bir güven protokolüdür. Güveni vicdana değil, önceden belirlenmiş kurallara emanet etmeyi amaçlar."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Zinesh nasıl çalışır?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Taraflar anlaşır, ödeme güvenli kasada bekletilir, iş tamamlanınca onaylanır ve para aktarılır. Anlaşmazlık olursa bağımsız hakemler kanıtlara bakarak karar verir."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Ödemeler nasıl yapılır?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Tüm emanetler Türk Lirası (₺) ile tutulur. Site bakiyenize para yükleyip emanet oluşturabilirsiniz."
+            }
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <main class="wrap">
+      <span class="badge">Zinesh Güven Katmanı</span>
+      <h1>Zinesh Nedir?</h1>
+
+      <p>İnsanlık tarih boyunca birlikte yaşayabilmek için güvenmek zorundaydı.</p>
+      <p>Eskiden insanlar aynı köyde yaşardı.</p>
+      <p>Birbirlerini tanırlardı.</p>
+      <p>Kimin dürüst olduğunu, kimin sözünde durduğunu bilirlerdi.</p>
+      <p>Ancak dünya değişti.</p>
+      <p>
+        Bugün bir yazılımcı Hindistan'daki bir müşteriye iş yapabiliyor. Bir tasarımcı Almanya'daki bir şirket için
+        logo hazırlayabiliyor. Bir tamirci, danışman, çevirmen veya öğretmen hiç tanımadığı insanlarla çalışabiliyor.
+      </p>
+      <p>İnternet insanları birbirine yaklaştırdı.</p>
+      <p>Ama güven sorununu çözmedi.</p>
+
+      <p>Bugün internette hizmet alırken veya verirken herkesin aklında aynı sorular var.</p>
+
+      <div class="questions">
+        <p>“Parayı gönderirsem karşı taraf ortadan kaybolursa ne olacak?”</p>
+        <p>“İşi teslim edersem paramı alamazsam ne olacak?”</p>
+        <p>“Karşı taraf sözünde durmazsa beni kim koruyacak?”</p>
+      </div>
+
+      <p>Bazı insanlar bu riski kabul ediyor.</p>
+      <p>Bazıları hiç iş yapmamayı tercih ediyor.</p>
+      <p>Bazıları ise yüksek komisyonlar alan platformları kullanıyor.</p>
+      <p>Zinesh tam da bu noktada ortaya çıkıyor.</p>
+
+      <div class="highlight">
+        <p>
+          Zinesh, insanların birbirlerine güvenmek zorunda kalmadan birlikte çalışabilmelerini sağlayan bir güven
+          protokolüdür.
+        </p>
+        <p>İnsanları değiştirmeye çalışmaz.</p>
+        <p>İnsanların her zaman iyi davranacağını varsaymaz.</p>
+        <p>
+          Sadece insanların korkabildiğini, hata yapabildiğini ve bazen kendi çıkarlarını önceliklendirebildiğini kabul
+          eder.
+        </p>
+        <p>Bu nedenle güveni insanların vicdanına değil, önceden belirlenmiş kurallara emanet etmeyi amaçlar.</p>
+      </div>
+
+      <h2>Zinesh Nasıl Çalışır?</h2>
+      <p>Aslında oldukça basit.</p>
+      <p>Bir müşteri ile hizmet sağlayıcı anlaşır.</p>
+      <p>Örneğin bir müşteri bir tasarımcıya logo yaptırmak istiyor.</p>
+      <p>Taraflar fiyat konusunda anlaşır.</p>
+      <p>Müşteri ödemeyi doğrudan tasarımcıya göndermez.</p>
+      <p>Ödeme önce Zinesh'in güvenli kasasına yatırılır.</p>
+      <p>Bu para geçici olarak bekletilir.</p>
+      <p>Tasarımcı işi tamamlar.</p>
+      <p>Müşteri memnun kalırsa ödemeyi onaylar.</p>
+      <p>Para tasarımcıya aktarılır.</p>
+      <p>Her iki taraf da sorunsuz şekilde işlemi tamamlamış olur.</p>
+
+      <p><strong style="color: #fff">Peki ya anlaşmazlık çıkarsa?</strong></p>
+      <p>
+        Müşteri işin eksik olduğunu düşünüyorsa veya tasarımcı emeğinin karşılığını alamadığını düşünüyorsa sistem
+        bağımsız hakemleri devreye alır.
+      </p>
+      <p>Hakemler gönderilen dosyalara, konuşmalara ve kanıtlara bakar.</p>
+      <p>Karar verilir.</p>
+      <p>Sistem kararı uygular.</p>
+      <p>Böylece taraflardan hiçbiri diğerine körü körüne güvenmek zorunda kalmaz.</p>
+
+      <h2>Neden Böyle Bir Sisteme İhtiyaç Var?</h2>
+      <p>Çünkü güven giderek daha değerli hale geliyor.</p>
+      <p>İnsanlar her gün tanımadıkları kişilerle iş yapıyor.</p>
+      <p>Ekonomik belirsizlikler artıyor.</p>
+      <p>Dolandırıcılık vakaları çoğalıyor.</p>
+      <p>Verilen sözler her zaman yeterli olmuyor.</p>
+      <p>İnsan doğası değişmez.</p>
+      <p>Belirsizlik arttığında korku, iyi niyetin önüne geçebilir.</p>
+      <p>Tarih boyunca toplumlar bu soruna farklı çözümler üretti.</p>
+      <p>Bazıları ortak depolar inşa etti.</p>
+      <p>Bazıları bankalar kurdu.</p>
+      <p>Bazıları sigorta sistemleri geliştirdi.</p>
+      <p>Bazıları blockchain teknolojisini ortaya çıkardı.</p>
+      <p>Zinesh de aynı soruya verilmiş modern bir cevap olarak düşünülebilir.</p>
+      <p>Amaç insanları kontrol etmek değildir.</p>
+      <p>Amaç insanların birbirlerine güvenmek zorunda kalmadan birlikte çalışabilmelerini sağlamaktır.</p>
+
+      <h2>Ödemeler Nasıl Çalışır?</h2>
+      <p>Zinesh'te tüm emanetler <strong>Türk Lirası (₺)</strong> ile tutulur.</p>
+      <p>Site bakiyenize para yükler, anlaştığınız iş için emanet oluşturursunuz.</p>
+      <p>Para iş bitene kadar kilitli kalır; siz onaylayınca karşı tarafa aktarılır.</p>
+      <p>
+        Asıl değer, insanların birbirlerini tanımadan, birbirlerine güvenmek zorunda kalmadan ve yüksek komisyonlar
+        ödemeden birlikte çalışabilmesini sağlayan kurallarda yatmaktadır.
+      </p>
+
+      <h2>Kısaca</h2>
+      <div class="summary">
+        <p>Igudar tahılı koruyordu.</p>
+        <p>Bankalar parayı koruyor.</p>
+        <p>Zinesh ise insanların verdiği sözü güvence altına almaya çalışıyor.</p>
+      </div>
+
+      <a class="cta" href="https://www.zinesh.com/">Zinesh'e Katıl →</a>
+
+      <div class="links">
+        <a href="https://www.zinesh.com/guven-protokolu/">Güven Protokolü</a>
+        <a href="https://www.zinesh.com/blog/">Blog</a>
+        <a href="https://www.zinesh.com/sss/">SSS</a>
+        <a href="https://www.zinesh.com/kurucu/">Kurucu</a>
+        <a href="https://www.zinesh.com/">Ana site</a>
+        <a href="https://x.com/zineshprotocol" rel="noopener noreferrer">X (Twitter)</a>
+        <a href="https://t.me/zinesh1" rel="noopener noreferrer">Telegram</a>
+      </div>
+
+      <footer>
+        © Zinesh Protocol — Hizmet işlerinde güven protokolü.
+        <br>
+        <a href="https://www.zinesh.com/">www.zinesh.com</a>
+      </footer>
+    </main>
+  </body>
+</html>

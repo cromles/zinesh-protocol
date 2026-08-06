@@ -1,0 +1,52 @@
+{
+  "name": "zinesh-protocol",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port=3000 --host=0.0.0.0",
+    "build": "node scripts/generate-static-pages.mjs && node scripts/generate-favicons.mjs && vite build",
+    "verify:deploy": "node scripts/verify-before-deploy.mjs",
+    "verify:app": "node scripts/verify-app-subdomain.mjs",
+    "firebase:setup-app": "node scripts/setup-firebase-app-hosting.mjs",
+    "deploy:firebase:app": "npm run build && npx firebase-tools deploy --only hosting:app",
+    "deploy:firebase:bridge": "npx firebase-tools deploy --only hosting:app",
+    "deploy:firebase:finish": "node scripts/wait-and-deploy-firebase.mjs",
+    "deploy:api:cors": "py -3 scripts/deploy_api_cors.py",
+    "deploy:app": "npm run build && py -3 scripts/deploy_app_subdomain.py",
+    "deploy:live": "npm run build && py -3 scripts/deploy_live.py",
+    "fix:apex": "node scripts/fix-cloudflare-apex-redirect.mjs",
+    "preview": "vite preview",
+    "clean": "rm -rf dist server.js",
+    "lint": "tsc --noEmit",
+    "google:auth-setup": "node scripts/setup-google-auth.mjs"
+  },
+  "dependencies": {
+    "@google/genai": "^2.4.0",
+    "@tailwindcss/vite": "^4.1.14",
+    "@vitejs/plugin-react": "^5.0.4",
+    "dotenv": "^17.2.3",
+    "ethers": "^6.13.5",
+    "express": "^4.21.2",
+    "firebase": "^12.15.0",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.21",
+    "esbuild": "^0.25.0",
+    "firebase-tools": "^14.27.0",
+    "sharp": "^0.35.2",
+    "tailwindcss": "^4.1.14",
+    "to-ico": "^1.1.5",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.3"
+  }
+}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zinesh Google Giriş</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #09090e;
+        color: #e4e4e7;
+        font-family: system-ui, sans-serif;
+      }
+      p { font-size: 14px; color: #a1a1aa; }
+    </style>
+  </head>
+  <body>
+    <p id="status">Google ile bağlanılıyor…</p>
+    <script type="module">
+      const ALLOWED_ORIGINS = new Set([
+        'https://zinesh.com',
+        'https://www.zinesh.com',
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+      ]);
+
+      const params = new URLSearchParams(window.location.search);
+      const openerOrigin = params.get('origin') || '';
+      const status = document.getElementById('status');
+
+      function reply(payload) {
+        if (!window.opener || !ALLOWED_ORIGINS.has(openerOrigin)) return;
+        window.opener.postMessage(payload, openerOrigin);
+      }
+
+      if (!ALLOWED_ORIGINS.has(openerOrigin)) {
+        status.textContent = 'Geçersiz kaynak adresi.';
+        reply({ type: 'zinesh_google_auth_error', message: 'Geçersiz kaynak adresi.' });
+        throw new Error('invalid origin');
+      }
+
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
+      import { getAuth, GoogleAuthProvider, signInWithPopup } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
+
+      const app = initializeApp({
+        apiKey: 'AIzaSyBi9EkzJMB9IooLWHbxg-22A8Eo5xA0kGg',
+        authDomain: 'decisive-patrol-dszp9.firebaseapp.com',
+        projectId: 'decisive-patrol-dszp9',
+        appId: '1:257857589601:web:79d502007262098d9af520',
+      });
+
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+
+      signInWithPopup(getAuth(app), provider)
+        .then(async (cred) => {
+          const idToken = await cred.user.getIdToken();
+          reply({ type: 'zinesh_google_auth', idToken });
+          status.textContent = 'Tamamlandı, pencere kapanıyor…';
+          window.setTimeout(() => window.close(), 400);
+        })
+        .catch((err) => {
+          const code = err?.code || '';
+          let message = 'Google ile bağlanılamadı.';
+          if (code === 'auth/popup-closed-by-user') message = 'Google girişi iptal edildi.';
+          if (code === 'auth/operation-not-allowed') {
+            message = 'Firebase\'de Google girişi kapalı. Authentication → Google → Enable.';
+          }
+          status.textContent = message;
+          reply({ type: 'zinesh_google_auth_error', message, code });
+        });
+    </script>
+  </body>
+</html>

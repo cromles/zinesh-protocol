@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" href="/favicon-48x48.png" sizes="48x48">
+    <link rel="icon" type="image/png" href="/favicon-192x192.png" sizes="192x192">
+    <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="192x192">
+    <title>Zinesh — 1 Dakikalık Tanıtım (Kayıt Modu)</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --purple: #a855f7;
+        --amber: #fbbf24;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #020204;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
+      /* 16:9 kayıt alanı — tam ekranda ortalanır */
+      #stage {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        max-width: calc(100vh * 16 / 9);
+        max-height: calc(100vw * 9 / 16);
+        margin: auto;
+        top: 50%;
+        transform: translateY(-50%);
+        background: radial-gradient(ellipse at 50% 30%, rgba(168, 85, 247, 0.12), transparent 55%), #020204;
+        overflow: hidden;
+      }
+      @media (min-aspect-ratio: 16/9) {
+        #stage {
+          width: calc(100vh * 16 / 9);
+          height: 100vh;
+          left: 50%;
+          transform: translate(-50%, -50%);
+        }
+      }
+      .scene {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 8% 10%;
+        text-align: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.9s ease;
+      }
+      .scene.active { opacity: 1; }
+      .scene.exit { opacity: 0; transition: opacity 0.6s ease; }
+      .kicker {
+        font-size: clamp(0.65rem, 1.8vw, 0.85rem);
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: var(--purple);
+        font-weight: 700;
+        margin-bottom: 1.25rem;
+      }
+      h1 {
+        font-size: clamp(1.5rem, 4.2vw, 2.75rem);
+        font-weight: 900;
+        color: #fff;
+        line-height: 1.12;
+        letter-spacing: -0.03em;
+        max-width: 18ch;
+      }
+      h1.gradient {
+        background: linear-gradient(135deg, #e9d5ff, #fff, #fde68a);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      p {
+        font-size: clamp(0.95rem, 2.2vw, 1.35rem);
+        color: #a1a1aa;
+        line-height: 1.55;
+        max-width: 36ch;
+        margin-top: 1.25rem;
+      }
+      p.light { color: #d4d4d8; }
+      p.white { color: #fff; font-weight: 600; }
+      .questions {
+        margin-top: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+        width: 100%;
+        max-width: 42ch;
+      }
+      .questions span {
+        font-size: clamp(0.8rem, 1.9vw, 1.1rem);
+        color: #d4d4d8;
+        font-style: italic;
+        opacity: 0;
+        transform: translateY(8px);
+        animation: none;
+      }
+      .scene.active .questions span {
+        animation: fadeUp 0.6s ease forwards;
+      }
+      .scene.active .questions span:nth-child(1) { animation-delay: 0.2s; }
+      .scene.active .questions span:nth-child(2) { animation-delay: 0.55s; }
+      .scene.active .questions span:nth-child(3) { animation-delay: 0.9s; }
+      @keyframes fadeUp {
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .timeline {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem 1.25rem;
+        margin-top: 1.5rem;
+        max-width: 50ch;
+      }
+      .timeline div {
+        font-size: clamp(0.75rem, 1.7vw, 1rem);
+        color: #71717a;
+      }
+      .timeline strong { color: #fff; display: block; font-size: 1.05em; }
+      .logo-wrap {
+        position: relative;
+        margin-bottom: 1rem;
+      }
+      .logo-frame {
+        width: clamp(100px, 18vw, 160px);
+        height: clamp(100px, 18vw, 160px);
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .logo-frame::before,
+      .logo-frame::after {
+        content: '';
+        position: absolute;
+        inset: 12%;
+        border: 2px solid rgba(255, 255, 255, 0.85);
+        pointer-events: none;
+      }
+      .logo-frame::before {
+        border-right: none;
+        border-bottom: none;
+      }
+      .logo-frame::after {
+        border-left: none;
+        border-top: none;
+        inset: 12%;
+        transform: rotate(0deg);
+      }
+      .corner-br, .corner-bl {
+        position: absolute;
+        width: 22%;
+        height: 22%;
+        border: 2px solid rgba(255, 255, 255, 0.85);
+      }
+      .corner-br { bottom: 12%; right: 12%; border-left: none; border-top: none; }
+      .corner-bl { bottom: 12%; left: 12%; border-right: none; border-top: none; }
+      .logo-text {
+        font-size: clamp(0.85rem, 2vw, 1.15rem);
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        color: #fff;
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.35);
+      }
+      .stars {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.5;
+      }
+      .star {
+        position: absolute;
+        width: 2px;
+        height: 2px;
+        background: #fff;
+        border-radius: 50%;
+        animation: twinkle 3s ease-in-out infinite;
+      }
+      @keyframes twinkle {
+        0%, 100% { opacity: 0.2; }
+        50% { opacity: 0.9; }
+      }
+      .cta-url {
+        font-size: clamp(1.1rem, 3vw, 2rem);
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: 0.02em;
+        margin-top: 0.5rem;
+      }
+      .cta-sub {
+        font-size: clamp(0.75rem, 1.6vw, 0.95rem);
+        color: var(--purple);
+        margin-top: 0.75rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+      /* Kayıt öncesi kontrol paneli — kayıtta gizlenir */
+      #controls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.92);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 0.75rem 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        font-size: 0.8rem;
+        color: #a1a1aa;
+      }
+      #controls.hidden { display: none; }
+      #controls button {
+        background: #fff;
+        color: #000;
+        border: none;
+        padding: 0.55rem 1.1rem;
+        border-radius: 999px;
+        font-weight: 700;
+        cursor: pointer;
+        font-size: 0.8rem;
+      }
+      #controls button.secondary {
+        background: transparent;
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      #timer {
+        font-variant-numeric: tabular-nums;
+        color: #fff;
+        min-width: 4ch;
+      }
+      #progress {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 3px;
+        background: var(--purple);
+        width: 0%;
+        transition: width 0.2s linear;
+        z-index: 50;
+      }
+      body.record-mode #controls { display: none; }
+      body.record-mode #progress { bottom: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div id="progress"></div>
+
+      <!-- Sahne 1: 0–8s -->
+      <section class="scene" data-duration="8000">
+        <span class="kicker">Güven kıtlığı</span>
+        <h1 class="gradient">Güven kıtlaştığında toplumlar ne inşa eder?</h1>
+      </section>
+
+      <!-- Sahne 2: 8–16s -->
+      <section class="scene" data-duration="8000">
+        <p class="light">Eskiden insanlar aynı köyde yaşardı.</p>
+        <p class="white" style="margin-top: 0.75rem">Birbirlerini tanırlardı.</p>
+        <p style="margin-top: 1rem">Bugün bir tasarımcı Almanya'dan, bir yazılımcı Hindistan'dan iş alabiliyor.</p>
+        <p class="white" style="margin-top: 1rem">İnternet bizi yaklaştırdı.</p>
+        <p style="margin-top: 0.5rem">Ama güven sorununu çözmedi.</p>
+      </section>
+
+      <!-- Sahne 3: 16–24s -->
+      <section class="scene" data-duration="8000">
+        <span class="kicker">Herkesin sorusu</span>
+        <div class="questions">
+          <span>Parayı gönderirsem karşı taraf kaybolursa?</span>
+          <span>İşi teslim edersem paramı alamazsam?</span>
+          <span>Karşı taraf sözünde durmazsa beni kim korur?</span>
+        </div>
+      </section>
+
+      <!-- Sahne 4: 24–34s -->
+      <section class="scene" data-duration="10000">
+        <span class="kicker">Tarih tekrar eder</span>
+        <div class="timeline">
+          <div><strong>Igudar</strong> tahılı korudu</div>
+          <div><strong>Bankalar</strong> parayı koruyor</div>
+          <div><strong>Sigorta</strong> riski paylaştırıyor</div>
+        </div>
+        <p class="white" style="margin-top: 1.5rem">Bugün insanlar emeklerini, itibarlarını ve sözlerini koruyor.</p>
+      </section>
+
+      <!-- Sahne 5: 34–46s -->
+      <section class="scene" data-duration="12000">
+        <div class="logo-wrap">
+          <div class="stars" id="stars"></div>
+          <div class="logo-frame">
+            <div class="corner-br"></div>
+            <div class="corner-bl"></div>
+            <span class="logo-text">ZINESH</span>
+          </div>
+        </div>
+        <p class="white">Güveni kişilere değil, kurallara emanet ediyoruz.</p>
+        <p style="margin-top: 1rem">Ödeme kasada bekler. Sorun olursa hakemler bakar.</p>
+        <p style="margin-top: 0.5rem; font-size: 0.85em; color: #71717a; font-style: italic">
+          Tarihsel soy bağı iddiası değil — tekrar eden bir örüntünün modern yansıması.
+        </p>
+      </section>
+
+      <!-- Sahne 6: 46–60s -->
+      <section class="scene" data-duration="14000">
+        <p class="light">Igudar tahılı koruyordu.</p>
+        <p class="light">Bankalar parayı koruyor.</p>
+        <p class="white" style="font-size: clamp(1rem, 2.5vw, 1.5rem); margin-top: 0.5rem">
+          Zinesh, insanların verdiği sözü güvence altına almaya çalışıyor.
+        </p>
+        <p class="cta-url">www.zinesh.com</p>
+        <p class="cta-sub">Kurucu üye kampanyası açık</p>
+      </section>
+    </div>
+
+    <div id="controls">
+      <span id="timer">0:00</span>
+      <button type="button" id="btn-start">▶ Kayda başla (60 sn)</button>
+      <button type="button" class="secondary" id="btn-restart">Baştan oynat</button>
+      <span>Tam ekran (F11) → Win+G veya OBS ile kaydet → CapCut'ta müzik ekle</span>
+    </div>
+
+    <script>
+      (function () {
+        var scenes = Array.prototype.slice.call(document.querySelectorAll('.scene'));
+        var totalMs = scenes.reduce(function (s, el) {
+          return s + parseInt(el.getAttribute('data-duration'), 10);
+        }, 0);
+        var progress = document.getElementById('progress');
+        var timerEl = document.getElementById('timer');
+        var idx = 0;
+        var elapsed = 0;
+        var running = false;
+        var tickId = null;
+        var sceneTimeout = null;
+
+        for (var i = 0; i < 40; i++) {
+          var st = document.createElement('div');
+          st.className = 'star';
+          st.style.left = Math.random() * 100 + '%';
+          st.style.top = Math.random() * 100 + '%';
+          st.style.animationDelay = Math.random() * 3 + 's';
+          var box = document.getElementById('stars');
+          if (box) box.appendChild(st);
+        }
+
+        function fmt(ms) {
+          var sec = Math.floor(ms / 1000);
+          var m = Math.floor(sec / 60);
+          var s = sec % 60;
+          return m + ':' + (s < 10 ? '0' : '') + s;
+        }
+
+        function showScene(i) {
+          scenes.forEach(function (sc, j) {
+            sc.classList.remove('active', 'exit');
+            if (j < i) sc.classList.add('exit');
+            if (j === i) sc.classList.add('active');
+          });
+        }
+
+        function stop() {
+          running = false;
+          clearInterval(tickId);
+          clearTimeout(sceneTimeout);
+        }
+
+        function playFrom(startIdx) {
+          stop();
+          idx = startIdx || 0;
+          elapsed = scenes.slice(0, idx).reduce(function (s, el) {
+            return s + parseInt(el.getAttribute('data-duration'), 10);
+          }, 0);
+          showScene(idx);
+
+          function nextScene() {
+            if (idx >= scenes.length) {
+              stop();
+              progress.style.width = '100%';
+              timerEl.textContent = fmt(totalMs);
+              return;
+            }
+            var dur = parseInt(scenes[idx].getAttribute('data-duration'), 10);
+            sceneTimeout = setTimeout(function () {
+              idx++;
+              if (idx < scenes.length) {
+                showScene(idx);
+                nextScene();
+              } else {
+                stop();
+                progress.style.width = '100%';
+                timerEl.textContent = fmt(totalMs);
+              }
+            }, dur);
+          }
+          nextScene();
+
+          running = true;
+          var start = Date.now() - elapsed;
+          tickId = setInterval(function () {
+            if (!running) return;
+            elapsed = Date.now() - start;
+            if (elapsed >= totalMs) elapsed = totalMs;
+            progress.style.width = (elapsed / totalMs) * 100 + '%';
+            timerEl.textContent = fmt(elapsed);
+          }, 100);
+        }
+
+        document.getElementById('btn-start').addEventListener('click', function () {
+          document.body.classList.add('record-mode');
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(function () {});
+          }
+          playFrom(0);
+        });
+
+        document.getElementById('btn-restart').addEventListener('click', function () {
+          document.body.classList.remove('record-mode');
+          playFrom(0);
+        });
+
+        showScene(0);
+        timerEl.textContent = '1:00';
+      })();
+    </script>
+  </body>
+</html>

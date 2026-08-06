@@ -1,0 +1,9 @@
+{
+  "name": "zinesh-withdraw-scripts",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "ethers": "^6.13.4",
+    "tronweb": "^6.0.0"
+  }
+}

@@ -1,0 +1,32 @@
+# Zinesh — Apache fallback (aaPanel Nginx öncelikli)
+<IfModule mod_headers.c>
+  # HTML — her zaman güncel
+  <FilesMatch "\.(html)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+
+  # Statik varlıklar — 1 yıl, immutable
+  <FilesMatch "\.(js|css|png|jpg|jpeg|webp|svg|ico|woff2?|webmanifest)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
+
+Options -Indexes
+
+<FilesMatch "^(\.env|\.git|composer\.(json|lock)|package(-lock)?\.json)$">
+  Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # www'siz zinesh.com → www (apex Shopify/404 yönlendirmesi yedek)
+  RewriteCond %{HTTP_HOST} ^zinesh\.com$ [NC]
+  RewriteRule ^(.*)$ https://www.zinesh.com/$1 [R=301,L]
+
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>

@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "decisive-patrol-dszp9"
+  },
+  "targets": {
+    "decisive-patrol-dszp9": {
+      "hosting": {
+        "app": [
+          "decisive-patrol-dszp9"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

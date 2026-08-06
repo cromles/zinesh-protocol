@@ -1,0 +1,6 @@
+{
+  "name": "Zinesh",
+  "description": "Üçüncü taraf güvenli ödeme ve emanet (Escrow) — alıcı ve satıcıyı aynı anda korur.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

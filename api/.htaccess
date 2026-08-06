@@ -1,0 +1,13 @@
+# Zinesh API güvenlik
+<Files "config.local.php">
+  Require all denied
+</Files>
+<Files "config.php">
+  Require all denied
+</Files>
+<Files "setup_bootstrap.php">
+  Require all denied
+</Files>
+<FilesMatch "\.(json|example)$">
+  Require all denied
+</FilesMatch>
