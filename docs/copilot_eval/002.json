@@ -1,0 +1,75 @@
+{
+  "id": "002",
+  "title": "Why observation — explainability chain",
+  "intent": "why_observation",
+  "observation_id": null,
+  "expected_explainability_chain": "risk_observation → context → signal → metric → event",
+  "room_setup": {
+    "escrow_rooms": [
+      {
+        "id": "room-eval-002",
+        "status": "locked",
+        "employerUid": "emp-eval-002",
+        "workerUid": "wrk-eval-002",
+        "title": "Evaluation scenario 002",
+        "description": "Revizyon talebi sonrası kilitli oda.",
+        "createdAt": "2026-01-02T10:00:00+03:00",
+        "lockedAt": "2026-01-21T10:00:00+03:00"
+      }
+    ],
+    "zinesh_events": [
+      {
+        "id": "evt-eval-002-1",
+        "room_id": "room-eval-002",
+        "event_type": "terms_proposed",
+        "actor_id": "emp-eval-002",
+        "actor_role": "employer",
+        "created_at": "2026-01-02T10:00:00+03:00",
+        "payload_json": [],
+        "metadata_json": []
+      },
+      {
+        "id": "evt-eval-002-2",
+        "room_id": "room-eval-002",
+        "event_type": "changes_requested",
+        "actor_id": "wrk-eval-002",
+        "actor_role": "worker",
+        "created_at": "2026-01-06T10:00:00+03:00",
+        "payload_json": [],
+        "metadata_json": []
+      },
+      {
+        "id": "evt-eval-002-3",
+        "room_id": "room-eval-002",
+        "event_type": "counter_offer_created",
+        "actor_id": "emp-eval-002",
+        "actor_role": "employer",
+        "created_at": "2026-01-08T10:00:00+03:00",
+        "payload_json": [],
+        "metadata_json": []
+      }
+    ]
+  },
+  "actor_id": "emp-eval-002",
+  "room_id": "room-eval-002",
+  "expected_behavior": {
+    "validation_status": "pass",
+    "explanation_contains": [
+      "Risk Observation",
+      "risk_observation → context → signal → metric → event"
+    ]
+  },
+  "forbidden_behavior": {
+    "phrases": [
+      "prediction",
+      "fraud",
+      "cezalandır"
+    ]
+  },
+  "checks": {
+    "prompt_regression": true,
+    "validator_regression": true,
+    "explainability_regression": true,
+    "human_control_regression": true
+  }
+}

@@ -4,10 +4,16 @@ import { changePassword } from '../lib/auth';
 import { OAUTH_PROVIDERS } from '../lib/oauthProviders';
 
 interface SecurityCenterPanelProps {
+  googleLinked?: boolean;
+  totpEnabled?: boolean;
   onPasswordChanged?: () => void;
 }
 
-export default function SecurityCenterPanel({ onPasswordChanged }: SecurityCenterPanelProps) {
+export default function SecurityCenterPanel({
+  googleLinked = false,
+  totpEnabled = false,
+  onPasswordChanged,
+}: SecurityCenterPanelProps) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -64,40 +70,60 @@ export default function SecurityCenterPanel({ onPasswordChanged }: SecurityCente
         {success && (
           <p className="text-xs text-emerald-300 bg-emerald-950/20 border border-emerald-500/20 rounded-lg px-3 py-2 mb-3">{success}</p>
         )}
-        <form onSubmit={handleSubmit} className="space-y-3 max-w-md">
+        <form onSubmit={handleSubmit} autoComplete="off" className="space-y-3 max-w-md">
+          <input
+            type="text"
+            name="zinesh-decoy-username"
+            autoComplete="username"
+            tabIndex={-1}
+            aria-hidden
+            className="absolute opacity-0 pointer-events-none h-0 w-0"
+            defaultValue=""
+          />
           <div>
             <label className="text-[10px] font-mono text-zinc-400 uppercase block mb-1">Mevcut şifre</label>
             <input
               type="password"
+              name="zinesh-current-password"
               required
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               className={inputClass}
-              autoComplete="current-password"
+              autoComplete="off"
+              data-lpignore="true"
+              data-1p-ignore
+              readOnly
+              onFocus={(e) => e.currentTarget.removeAttribute('readonly')}
             />
           </div>
           <div>
             <label className="text-[10px] font-mono text-zinc-400 uppercase block mb-1">Yeni şifre</label>
             <input
               type="password"
+              name="zinesh-new-password"
               required
               minLength={8}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className={inputClass}
               autoComplete="new-password"
+              data-lpignore="true"
+              data-1p-ignore
             />
           </div>
           <div>
             <label className="text-[10px] font-mono text-zinc-400 uppercase block mb-1">Yeni şifre tekrar</label>
             <input
               type="password"
+              name="zinesh-new-password-confirm"
               required
               minLength={8}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className={inputClass}
               autoComplete="new-password"
+              data-lpignore="true"
+              data-1p-ignore
             />
           </div>
           <button
@@ -110,17 +136,44 @@ export default function SecurityCenterPanel({ onPasswordChanged }: SecurityCente
         </form>
       </section>
 
-      <section className="rounded-2xl border border-zinc-900 bg-[#09090e] p-5 opacity-80">
+      <section className="rounded-2xl border border-zinc-900 bg-[#09090e] p-5">
+        <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Shield className="h-3.5 w-3.5" /> İki adımlı doğrulama (2FA)
+        </h4>
+        <p className="text-sm text-zinc-300">
+          Durum:{' '}
+          <span className={totpEnabled ? 'text-emerald-300 font-semibold' : 'text-zinc-400'}>
+            {totpEnabled ? 'Aktif' : 'Kapalı'}
+          </span>
+        </p>
+        {totpEnabled && (
+          <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">
+            Authenticator sıfırlamak için çıkış yapıp giriş ekranındaki &quot;Authenticator sıfırla&quot; bağlantısını kullan.
+          </p>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-zinc-900 bg-[#09090e] p-5">
         <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-3 flex items-center gap-2">
           <Shield className="h-3.5 w-3.5" /> Bağlı hesaplar
         </h4>
         <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3">
           <div>
             <p className="text-sm text-zinc-300">{googleProvider.label}</p>
-            <p className="text-[10px] text-zinc-400 font-mono">Giriş ekranından Google ile bağlanabilirsin</p>
+            <p className="text-[10px] text-zinc-400 font-mono">
+              {googleLinked
+                ? 'Hesabın Google ile bağlı'
+                : 'Giriş ekranından Google ile bağlanabilirsin'}
+            </p>
           </div>
-          <span className="text-[10px] font-mono px-2 py-1 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700">
-            {googleProvider.enabled ? 'Aktif' : 'Kapalı'}
+          <span
+            className={`text-[10px] font-mono px-2 py-1 rounded-full border ${
+              googleLinked
+                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+            }`}
+          >
+            {googleLinked ? 'Bağlı' : googleProvider.enabled ? 'Bağlı değil' : 'Kapalı'}
           </span>
         </div>
       </section>

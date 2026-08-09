@@ -122,9 +122,35 @@ function zinesh_json_write(string $file, array $data): void {
 
 /**
  * Atomik okuma-yazma (eşzamanlı isteklerde veri kaybını önler).
+ * Kilit alınamazsa kısa retry; hâlâ başarısızsa 503.
  * @return mixed Mutator dönüş değeri
  */
 function zinesh_json_atomic(string $file, callable $mutator) {
+    $cfg = zinesh_config()['file_lock'] ?? [];
+    $retries = max(1, (int)($cfg['retries'] ?? 6));
+    $retryMs = max(1, (int)($cfg['retry_ms'] ?? 30));
+    $last = null;
+
+    for ($attempt = 0; $attempt < $retries; $attempt++) {
+        try {
+            return zinesh_json_atomic_once($file, $mutator);
+        } catch (RuntimeException $e) {
+            $last = $e;
+            if ($attempt < $retries - 1) {
+                usleep($retryMs * 1000);
+            }
+        }
+    }
+
+    error_log('zinesh_json_atomic_failed: ' . $file . ' — ' . ($last?->getMessage() ?? 'unknown'));
+    zinesh_json_response([
+        'ok' => false,
+        'message' => 'Geçici yoğunluk. Lütfen birkaç saniye sonra tekrar deneyin.',
+    ], 503);
+}
+
+/** @return mixed */
+function zinesh_json_atomic_once(string $file, callable $mutator) {
     $path = zinesh_data_path($file);
     $dir = dirname($path);
     if (!is_dir($dir)) {
@@ -158,6 +184,18 @@ function zinesh_json_atomic(string $file, callable $mutator) {
 function zinesh_json_response(array $payload, int $code = 200): void {
     http_response_code($code);
     header('Cache-Control: no-store, no-cache, must-revalidate');
+    header('Pragma: no-cache');
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/** Kamuya açık, kısa süre cache'lenebilir JSON yanıtları (Cloudflare edge). */
+function zinesh_json_cached_response(array $payload, int $maxAgeSec = 120, int $code = 200): void {
+    http_response_code($code);
+    $maxAgeSec = max(0, $maxAgeSec);
+    $swr = min(600, max(60, $maxAgeSec * 2));
+    header('Cache-Control: public, max-age=' . $maxAgeSec . ', stale-while-revalidate=' . $swr);
+    header('CDN-Cache-Control: public, max-age=' . $maxAgeSec);
     echo json_encode($payload, JSON_UNESCAPED_UNICODE);
     exit;
 }

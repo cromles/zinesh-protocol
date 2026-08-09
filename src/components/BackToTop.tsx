@@ -42,7 +42,7 @@ export default function BackToTop() {
         bottom: 'max(1.25rem, env(safe-area-inset-bottom, 0px))',
       }}
     >
-      <ChevronUp className="h-5 w-5" strokeWidth={2.25} />
+      <ChevronUp className="h-5 w-5" strokeWidth={2.25} aria-hidden />
     </button>
   );
 }

@@ -1,4 +1,3 @@
-from deploy_common import USER, require_deploy_host, require_deploy_pass
 """Deploy CORS-related API files to production VPS."""
 from __future__ import annotations
 
@@ -8,8 +7,14 @@ from pathlib import Path
 
 import paramiko
 
+from deploy_common import (
+    USER,
+    require_deploy_host,
+    require_deploy_pass,
+    require_intelligence_regression_pass,
+)
+
 HOST = require_deploy_host()
-USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
 PASSWORD = require_deploy_pass()
 REMOTE_API = os.environ.get("ZINESH_REMOTE_API", "/www/wwwroot/zinesh.com/api")
 
@@ -21,6 +26,8 @@ FILES = [
 
 
 def main() -> int:
+    require_intelligence_regression_pass()
+
     missing = [str(p) for p in FILES if not p.is_file()]
     if missing:
         print("Missing files:", ", ".join(missing))

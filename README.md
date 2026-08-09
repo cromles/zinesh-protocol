@@ -32,9 +32,16 @@ npm run lint     # tsc --noEmit
 ## Deploy
 
 ```bash
+php api/scripts/run-intelligence-regression.php   # intelligence_regression_slice PASS → intelligence-regression.json
 npm run build
 python scripts/deploy_live.py
 ```
+
+Deploy gate (`require_intelligence_regression_pass`) şunları doğrular: `overall: PASS`, taze `generated_at`, tüm section'lar PASS, git HEAD eşleşmesi (repo varsa). Tüm `scripts/deploy_*.py` girişleri ve `npm run deploy:firebase:app` bu gate'i kullanır.
+
+Bypass (acil): `ZINESH_SKIP_REGRESSION_GATE=1`
+
+**Not:** `intelligence_regression_slice PASS` tam trust stack doğrulaması değildir; bkz. `docs/INTELLIGENCE_OPS.md`.
 
 ## Repo
 

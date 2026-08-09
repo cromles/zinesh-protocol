@@ -5,6 +5,8 @@ require_once __DIR__ . '/wallet_lib.php';
 require_once __DIR__ . '/campaign_lib.php';
 require_once __DIR__ . '/email_lib.php';
 require_once __DIR__ . '/kyc_lib.php';
+require_once __DIR__ . '/verification_lib.php';
+require_once __DIR__ . '/phone_lib.php';
 require_once __DIR__ . '/founder_lib.php';
 require_once __DIR__ . '/founder_profile_lib.php';
 require_once __DIR__ . '/founder_platform_lib.php';
@@ -21,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'campaign_status') {
-    zinesh_json_response(['ok' => true, 'campaign' => zinesh_campaign_public_status()]);
+    zinesh_json_cached_response(['ok' => true, 'campaign' => zinesh_campaign_public_status()], 120);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'rd_reserve_public') {
@@ -43,10 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'rd_rese
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'oauth_config') {
-    zinesh_json_response([
+    zinesh_json_cached_response([
         'ok' => true,
         'google' => zinesh_google_oauth_public_config(),
-    ]);
+    ], 300);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'google_start') {
@@ -121,6 +123,7 @@ if (
     || $action === 'forgot_password_verify'
     || $action === 'forgot_password_reset'
     || $action === 'change_password'
+    || $action === 'update_profile'
     || $action === 'totp_reset_send_code'
     || $action === 'totp_reset_confirm'
     || $action === 'oauth_google'
@@ -180,6 +183,7 @@ if ($action === 'register') {
         'foundingMember' => false,
         'foundingSlotConsumed' => false,
         'emailVerified' => false,
+        'phoneVerified' => false,
         'ipAddress' => $clientIp,
         'registrationIp' => $clientIp,
         'deviceFingerprint' => $deviceFingerprint,
@@ -518,7 +522,7 @@ if ($action === 'forgot_password_send') {
     zinesh_json_response([
         'ok' => true,
         'message' => $result['message'],
-        'mailSent' => $result['mailSent'] ?? true,
+        'mailSent' => $result['mailSent'] ?? false,
         'retryAfter' => $result['retryAfter'] ?? 60,
     ]);
 }
@@ -592,6 +596,26 @@ if ($action === 'change_password') {
     ]);
 }
 
+if ($action === 'update_profile') {
+    $user = zinesh_require_auth($input);
+    $uid = (string)$user['uid'];
+    $name = trim((string)($input['name'] ?? ''));
+    if ($name === '' || mb_strlen($name) < 2 || mb_strlen($name) > 80) {
+        zinesh_json_response(['message' => 'Ad soyad 2–80 karakter olmalı.'], 400);
+    }
+    if (($user['kycStatus'] ?? 'none') === 'approved') {
+        zinesh_json_response(['message' => 'Kimlik onaylı hesaplarda ad değişikliği için destek ile iletişime geç.'], 400);
+    }
+    $user = zinesh_update_user($uid, static function (array &$u) use ($name) {
+        $u['name'] = $name;
+    });
+    zinesh_json_response([
+        'ok' => true,
+        'message' => 'Profil güncellendi.',
+        'user' => zinesh_email_sanitize_public_user($user),
+    ]);
+}
+
 if ($action === 'totp_reset_send_code') {
     $email = strtolower(trim((string)($input['email'] ?? '')));
     $password = (string)($input['password'] ?? '');
@@ -610,7 +634,7 @@ if ($action === 'totp_reset_send_code') {
     zinesh_json_response([
         'ok' => true,
         'message' => $result['message'],
-        'mailSent' => $result['mailSent'] ?? true,
+        'mailSent' => $result['mailSent'] ?? false,
         'retryAfter' => $result['retryAfter'] ?? 60,
     ]);
 }
@@ -868,6 +892,90 @@ if ($action === 'session') {
             'isFounder' => $isFounder,
         ])),
         'isFounder' => $isFounder,
+    ]);
+}
+
+if ($action === 'send_phone_code') {
+    zinesh_rate_limit('email_resend', (int)($limits['auth'] ?? 10));
+    $user = zinesh_require_auth($input);
+    $phone = (string)($input['phone'] ?? '');
+    $result = zinesh_phone_prepare_verification((string)$user['uid'], $phone);
+    if (!$result['sent']) {
+        $status = isset($result['retryAfter']) ? 429 : 400;
+        zinesh_json_response([
+            'ok' => false,
+            'message' => $result['message'],
+            'retryAfter' => $result['retryAfter'] ?? null,
+        ], $status);
+    }
+    $token = trim((string)($input['sessionToken'] ?? ''));
+    if ($token === '' || !zinesh_uid_from_token($token)) {
+        $token = zinesh_create_session((string)$user['uid']);
+    }
+    zinesh_json_response([
+        'ok' => true,
+        'message' => $result['message'],
+        'mailSent' => $result['mailSent'] ?? false,
+        'user' => zinesh_email_sanitize_public_user(array_merge($user, [
+            'sessionToken' => $token,
+            'campaign' => zinesh_campaign_user_progress($user),
+        ])),
+    ]);
+}
+
+if ($action === 'verify_phone_code') {
+    zinesh_rate_limit('email_verify', (int)($limits['auth'] ?? 20));
+    $user = zinesh_require_auth($input);
+    $code = trim((string)($input['code'] ?? ''));
+    $result = zinesh_phone_verify_code((string)$user['uid'], $code);
+    if (!$result['ok']) {
+        zinesh_json_response([
+            'ok' => false,
+            'message' => $result['message'] ?? 'Doğrulama başarısız.',
+            'reason' => $result['reason'] ?? 'error',
+        ], 400);
+    }
+    $user = $result['user'] ?? zinesh_find_user_by_uid((string)$user['uid']);
+    $token = trim((string)($input['sessionToken'] ?? ''));
+    $uid = (string)($user['uid'] ?? '');
+    if ($token === '' || zinesh_uid_from_token($token) !== $uid) {
+        $token = zinesh_create_session($uid);
+    }
+    zinesh_json_response([
+        'ok' => true,
+        'message' => 'Telefon numaran doğrulandı.',
+        'user' => zinesh_email_sanitize_public_user(array_merge($user, [
+            'sessionToken' => $token,
+            'campaign' => zinesh_campaign_user_progress($user),
+        ])),
+    ]);
+}
+
+if ($action === 'verify_phone_firebase') {
+    zinesh_rate_limit('email_verify', (int)($limits['auth'] ?? 20));
+    $user = zinesh_require_auth($input);
+    $idToken = trim((string)($input['idToken'] ?? $input['firebaseIdToken'] ?? ''));
+    $result = zinesh_phone_verify_firebase_token((string)$user['uid'], $idToken);
+    if (!$result['ok']) {
+        zinesh_json_response([
+            'ok' => false,
+            'message' => $result['message'] ?? 'Telefon doğrulanamadı.',
+            'reason' => $result['reason'] ?? 'error',
+        ], 400);
+    }
+    $user = $result['user'] ?? zinesh_find_user_by_uid((string)$user['uid']);
+    $token = trim((string)($input['sessionToken'] ?? ''));
+    $uid = (string)($user['uid'] ?? '');
+    if ($token === '' || zinesh_uid_from_token($token) !== $uid) {
+        $token = zinesh_create_session($uid);
+    }
+    zinesh_json_response([
+        'ok' => true,
+        'message' => 'Telefon numaran SMS ile doğrulandı.',
+        'user' => zinesh_email_sanitize_public_user(array_merge($user, [
+            'sessionToken' => $token,
+            'campaign' => zinesh_campaign_user_progress($user),
+        ])),
     ]);
 }
 

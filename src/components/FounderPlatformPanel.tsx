@@ -115,7 +115,7 @@ export default function FounderPlatformPanel() {
             <StatCard
               label="Aktif oturum"
               value={String(stats.users.activeSessions)}
-              sub={`${stats.users.foundingMembers} kurucu üye`}
+              sub={`${stats.users.foundingMembers} erken kayıt`}
               accent="text-emerald-400"
               icon={<Activity className="h-3.5 w-3.5 text-emerald-400" />}
             />

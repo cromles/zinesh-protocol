@@ -3,6 +3,9 @@
 return [
     'admin_secret' => 'zinesh-admin-2026',
 
+    /** Staging / localhost demo — production'da asla true yapmayın */
+    // 'demo_mode' => true,
+
     /*
      * SMTP (önerilen: Brevo / SendGrid)
      * Güvenli yol: php setup_mail.php ile server_secrets.json'a yazın (şifre repoda kalmasın).
@@ -23,7 +26,7 @@ return [
     //         'username' => 'sizin@email.com',
     //         'password' => 'BREVO_SMTP_KEY',
     //     ],
-    //     'from_email' => 'noreply@zinesh.com',
+    //     'from_email' => 'kurucu@email.com',  // Brevo'da doğrulanmış gönderen
     // ],
 
     /** app.zinesh.com gibi ayrı origin'lerden API erişimi (config.local.php ile genişletilebilir) */
@@ -69,6 +72,20 @@ return [
      *         'sandbox' => true,
      *         'api_key' => 'sandbox-xxx',
      *         'secret_key' => 'sandbox-xxx',
+     *     ],
+     * ],
+     */
+
+    /**
+     * Intelligence Copilot — OpenAI ayarları (provider seçimi yalnızca env ile).
+     * ZINESH_COPILOT_PROVIDER=openai
+     * OPENAI_API_KEY veya server_secrets.json → openai_api_key
+     * ZINESH_OPENAI_MODEL veya config.local.php → copilot.openai.model
+     * 'copilot' => [
+     *     'openai' => [
+     *         'model' => 'gpt-4o',
+     *         'api_base' => 'https://api.openai.com/v1',
+     *         'timeout_seconds' => 30,
      *     ],
      * ],
      */

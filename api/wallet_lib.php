@@ -31,6 +31,8 @@ function zinesh_ensure_core_data_files(): void {
         'withdrawals.json' => [],
         'escrow_rooms.json' => [],
         'escrow_room_messages.json' => [],
+        'zinesh_events.json' => [],
+        'contract_versions.json' => [],
         'havale_pending.json' => [],
     ];
 

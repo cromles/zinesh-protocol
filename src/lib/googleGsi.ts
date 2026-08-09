@@ -1,7 +1,7 @@
 /** Google Identity Services — client_secret gerektirmez (zinesh-auth OAuth client). */
 
 export const ZINESH_GOOGLE_CLIENT_ID =
-  '970378833039-dv1mpkbp7448amub6ueng5j8nop31cd2.apps.googleusercontent.com';
+  '492794009757-8cqfdv9mb3kc1kg0kiqre9mtosm1inol.apps.googleusercontent.com';
 
 type GsiTokenResponse = {
   access_token?: string;

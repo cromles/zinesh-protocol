@@ -1,0 +1,49 @@
+name: Intelligence Regression
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: intelligence-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  intelligence-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run intelligence regression
+        run: php api/scripts/run-intelligence-regression.php
+
+      - name: Verify regression artifact
+        run: |
+          test -f intelligence-regression.json
+          php -r "$r=json_decode(file_get_contents('intelligence-regression.json'), true); if (!is_array($r)) { fwrite(STDERR, 'invalid json\n'); exit(1); } if (($r['overall'] ?? '') !== 'PASS') { fwrite(STDERR, 'overall not PASS\n'); exit(1); } if (($r['report_kind'] ?? '') !== 'intelligence_regression_slice') { fwrite(STDERR, 'invalid report_kind\n'); exit(1); } $issues=$r['reliability']['issues'] ?? null; if (!is_array($issues) || $issues !== []) { fwrite(STDERR, 'reliability issues present\n'); exit(1); }"
+
+      - name: Upload regression report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: intelligence-regression
+          path: intelligence-regression.json
+          if-no-files-found: error

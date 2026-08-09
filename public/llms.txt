@@ -1,0 +1,11 @@
+# Zinesh
+
+> Zinesh, güvenli ödeme ve escrow (emanet) çözümleri sunan dijital bir platformdur. Alıcı ve satıcı arasında parayı güvenli kasada tutar; kullanıcılar yazılı sözleşme oluşturabilir, TL bakiyesi yönetebilir ve anlaşmazlıkta hakem sürecine başvurabilir.
+
+## Bağlantılar
+
+- [Ana Sayfa](https://www.zinesh.com/): Platform ana sayfası ve genel bilgiler.
+- [Zinesh Nedir](https://www.zinesh.com/nedir/): Platformun ne olduğu, nasıl çalıştığı ve temel kavramlar.
+- [Güven Protokolü](https://www.zinesh.com/guven-protokolu/): Emanet kasası, onay akışı ve güven kuralları.
+- [Sık Sorulan Sorular](https://www.zinesh.com/sss/): Komisyon, hesap ve işlem süreçleri hakkında yanıtlar.
+- [Kullanıcı Konsolu](https://app.zinesh.com/): Sözleşme, bakiye ve emanet işlemleri için giriş paneli.

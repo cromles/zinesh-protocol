@@ -35,7 +35,7 @@ function zinesh_password_reset_cooldown_remaining(array $user): int {
 function zinesh_send_password_reset_email(string $email, string $name, string $code): bool {
     $safeName = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
     $safeCode = htmlspecialchars($code, ENT_QUOTES, 'UTF-8');
-    $subject = 'Zinesh şifre sıfırlama kodun: ' . $code;
+    $subject = 'Zinesh — Şifre sıfırlama kodun';
     $html = <<<HTML
 <!DOCTYPE html>
 <html lang="tr">
@@ -91,13 +91,6 @@ function zinesh_password_reset_send_code(string $email): array {
     }
 
     $issued = zinesh_email_issue_verification_code();
-    zinesh_update_user($uid, static function (array &$u) use ($issued) {
-        $u['passwordResetCode'] = $issued['hash'];
-        $u['passwordResetExpires'] = $issued['expires'];
-        $u['passwordResetAttempts'] = 0;
-        $u['passwordResetSentAt'] = date('c');
-    });
-
     $sent = zinesh_send_password_reset_email(
         (string)$user['email'],
         (string)($user['name'] ?? 'Üye'),
@@ -110,6 +103,13 @@ function zinesh_password_reset_send_code(string $email): array {
             'message' => 'E-posta şu an gönderilemedi. Bir dakika sonra tekrar dene.',
         ];
     }
+
+    zinesh_update_user($uid, static function (array &$u) use ($issued) {
+        $u['passwordResetCode'] = $issued['hash'];
+        $u['passwordResetExpires'] = $issued['expires'];
+        $u['passwordResetAttempts'] = 0;
+        $u['passwordResetSentAt'] = date('c');
+    });
 
     return ['ok' => true, 'message' => $generic, 'mailSent' => true, 'retryAfter' => 60];
 }

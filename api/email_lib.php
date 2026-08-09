@@ -3,10 +3,47 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/smtp_lib.php';
 require_once __DIR__ . '/brevo_api_lib.php';
+require_once __DIR__ . '/verification_lib.php';
+
+/** Brevo'da doğrulanmış gönderen (domain SPF/DKIM tamamlanana kadar noreply@ kullanılamaz). */
+function zinesh_mail_verified_sender_email(): string {
+    $env = getenv('ZINESH_MAIL_FROM');
+    if (is_string($env) && filter_var(trim($env), FILTER_VALIDATE_EMAIL)) {
+        return strtolower(trim($env));
+    }
+
+    $cfg = zinesh_config();
+    $founders = $cfg['founder_emails'] ?? [];
+    if (is_array($founders)) {
+        foreach ($founders as $email) {
+            $email = strtolower(trim((string)$email));
+            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return $email;
+            }
+        }
+    }
+
+    $configured = strtolower(trim((string)($cfg['mail']['from_email'] ?? '')));
+    if ($configured !== '' && !zinesh_mail_is_unverified_sender($configured)) {
+        return $configured;
+    }
+
+    return 'yasinkarademir147@gmail.com';
+}
+
+function zinesh_mail_is_unverified_sender(string $email): bool {
+    $email = strtolower(trim($email));
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return true;
+    }
+
+    return $email === 'noreply@zinesh.com';
+}
 
 function zinesh_mail_config(): array {
+    $verifiedFrom = zinesh_mail_verified_sender_email();
     $defaults = [
-        'from_email' => 'noreply@zinesh.com',
+        'from_email' => $verifiedFrom,
         'from_name' => 'Zinesh',
         'site_url' => 'https://www.zinesh.com',
         'verify_path' => '/api/verify_email.php',
@@ -43,11 +80,31 @@ function zinesh_mail_config(): array {
         }
     }
 
+    if (zinesh_mail_is_unverified_sender((string)$cfg['from_email'])) {
+        $cfg['from_email'] = $verifiedFrom;
+    }
+
     if (!isset($cfg['reply_to'])) {
         $cfg['reply_to'] = $cfg['from_email'];
     }
+    $cfg['reply_to'] = zinesh_mail_normalize_reply_to((string)$cfg['reply_to'], (string)$cfg['from_email']);
 
     return $cfg;
+}
+
+/** SMTP kullanıcı adı veya teknik adresleri Reply-To yapma — spam skorunu düşürür. */
+function zinesh_mail_normalize_reply_to(string $replyTo, string $fallback = ''): string {
+    if ($fallback === '' || zinesh_mail_is_unverified_sender($fallback)) {
+        $fallback = zinesh_mail_verified_sender_email();
+    }
+    $replyTo = strtolower(trim($replyTo));
+    if ($replyTo === '' || !filter_var($replyTo, FILTER_VALIDATE_EMAIL)) {
+        return $fallback;
+    }
+    if (preg_match('/@(smtp-brevo\.com|sendinblue\.com)$/i', $replyTo)) {
+        return $fallback;
+    }
+    return $replyTo;
 }
 
 function zinesh_email_verify_code_hash(string $code): string {
@@ -104,11 +161,17 @@ function zinesh_email_public_fields(array $user): array {
         'emailVerificationPending' => $pending,
         'signupRewardPending' => !$signupClaimed && zinesh_campaign_is_active(zinesh_campaign_ensure_state()),
         'signupRewardAmount' => (float)(zinesh_campaign_rewards_map()['founding_signup'] ?? 100),
+        'googleLinked' => trim((string)($user['googleSub'] ?? '')) !== '',
+        'totpEnabled' => !empty($user['totpEnabled']),
+        'jobHistoryPublic' => !array_key_exists('jobHistoryPublic', $user) || !empty($user['jobHistoryPublic']),
     ];
 }
 
 function zinesh_email_sanitize_public_user(array $user): array {
     $publicFields = zinesh_email_public_fields($user);
+    if (function_exists('zinesh_verification_public_fields')) {
+        $publicFields = array_merge($publicFields, zinesh_verification_public_fields($user));
+    }
     unset(
         $user['emailVerifyToken'],
         $user['emailVerifyExpires'],
@@ -117,12 +180,17 @@ function zinesh_email_sanitize_public_user(array $user): array {
         $user['pendingReferralCode'],
         $user['nationalIdHash'],
         $user['kycProfile'],
+        $user['phoneVerifyCode'],
+        $user['phoneVerifyExpires'],
+        $user['pendingPhone'],
+        $user['firebasePhoneUid'],
         $user['totpSecret'],
         $user['totpPendingSecret'],
         $user['passwordResetCode'],
         $user['passwordResetExpires'],
         $user['passwordResetAttempts'],
-        $user['passwordResetSentAt']
+        $user['passwordResetSentAt'],
+        $user['googleSub']
     );
     return array_merge($user, $publicFields);
 }
@@ -160,24 +228,17 @@ function zinesh_send_mail(string $to, string $subject, string $htmlBody, string 
         zinesh_audit('mail_brevo_api_failed', ['to' => $to, 'error' => $apiResult['error'] ?? '']);
     }
 
-    $boundary = 'zinesh_' . bin2hex(random_bytes(8));
-    $headers = [
-        'MIME-Version: 1.0',
-        'From: ' . sprintf('"%s" <%s>', addslashes($fromName), $fromEmail),
-        'Reply-To: ' . $replyTo,
-        'Content-Type: multipart/alternative; boundary="' . $boundary . '"',
-    ];
-
-    $body = "--{$boundary}\r\n";
-    $body .= "Content-Type: text/plain; charset=UTF-8\r\n\r\n";
-    $body .= $textBody . "\r\n\r\n";
-    $body .= "--{$boundary}\r\n";
-    $body .= "Content-Type: text/html; charset=UTF-8\r\n\r\n";
-    $body .= $htmlBody . "\r\n\r\n";
-    $body .= "--{$boundary}--";
-
     if (zinesh_smtp_configured()) {
+        $boundary = 'zinesh_' . bin2hex(random_bytes(8));
+        $body = "--{$boundary}\r\n";
+        $body .= "Content-Type: text/plain; charset=UTF-8\r\n\r\n";
+        $body .= $textBody . "\r\n\r\n";
+        $body .= "--{$boundary}\r\n";
+        $body .= "Content-Type: text/html; charset=UTF-8\r\n\r\n";
+        $body .= $htmlBody . "\r\n\r\n";
+        $body .= "--{$boundary}--";
         $mimeBody = "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n\r\n" . $body;
+
         $result = zinesh_smtp_send(
             zinesh_mail_config()['smtp'],
             $fromEmail,
@@ -191,10 +252,13 @@ function zinesh_send_mail(string $to, string $subject, string $htmlBody, string 
             zinesh_audit('mail_sent_smtp', ['to' => $to]);
             return true;
         }
-        zinesh_audit('mail_smtp_failed', ['to' => $to, 'error' => $result['error']]);
+        zinesh_audit('mail_smtp_failed', ['to' => $to, 'error' => $result['error'] ?? 'unknown']);
+    } else {
+        zinesh_audit('mail_smtp_not_configured', ['to' => $to]);
     }
 
-    return @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, implode("\r\n", $headers), "-f{$fromEmail}");
+    zinesh_audit('mail_send_failed', ['to' => $to, 'reason' => 'no_transport']);
+    return false;
 }
 
 function zinesh_send_verification_code_email(string $email, string $name, string $code): bool {
@@ -202,7 +266,7 @@ function zinesh_send_verification_code_email(string $email, string $name, string
     $safeName = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
     $safeCode = htmlspecialchars($code, ENT_QUOTES, 'UTF-8');
 
-    $subject = 'Zinesh doğrulama kodun: ' . $code;
+    $subject = 'Zinesh — E-posta doğrulama kodun';
     $html = <<<HTML
 <!DOCTYPE html>
 <html lang="tr">

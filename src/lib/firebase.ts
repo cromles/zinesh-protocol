@@ -1,20 +1,11 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { 
-  getFirestore, 
-  collection, 
-  addDoc, 
-  setDoc,
-  getDoc,
-  serverTimestamp, 
-  doc, 
-} from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import type { FirebaseApp } from 'firebase/app';
+import type { Auth } from 'firebase/auth';
+import type { Firestore } from 'firebase/firestore';
 import type { UserProfile } from './userProfile';
 
 export type { UserProfile };
 
-type FirebaseAppletConfig = {
+export type FirebaseAppletConfig = {
   projectId: string;
   appId: string;
   apiKey: string;
@@ -24,14 +15,84 @@ type FirebaseAppletConfig = {
   messagingSenderId: string;
 };
 
-const config = firebaseConfig as FirebaseAppletConfig;
-const app = initializeApp(config);
-export const db = config.firestoreDatabaseId
-  ? getFirestore(app, config.firestoreDatabaseId)
-  : getFirestore(app);
-export const auth = getAuth(app);
+let app: FirebaseApp | null = null;
+let authReady: Promise<Auth> | null = null;
+let dbReady: Promise<Firestore> | null = null;
 
-// Collection helper for registrations (leads)
+function envConfig(): FirebaseAppletConfig | null {
+  const apiKey = import.meta.env.VITE_FIREBASE_API_KEY?.trim();
+  const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID?.trim();
+  if (!apiKey || !projectId) return null;
+
+  const authDomain =
+    import.meta.env.VITE_FIREBASE_AUTH_DOMAIN?.trim() || `${projectId}.firebaseapp.com`;
+  const storageBucket =
+    import.meta.env.VITE_FIREBASE_STORAGE_BUCKET?.trim() ||
+    `${projectId}.firebasestorage.app`;
+
+  return {
+    apiKey,
+    projectId,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID?.trim() || '',
+    authDomain,
+    storageBucket,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID?.trim() || '',
+    firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID?.trim() || undefined,
+  };
+}
+
+async function loadConfig(): Promise<FirebaseAppletConfig> {
+  const fromEnv = envConfig();
+  if (fromEnv) return fromEnv;
+  const mod = await import('../../firebase-applet-config.json');
+  return mod.default as FirebaseAppletConfig;
+}
+
+/** Firebase web config (env öncelikli, yoksa firebase-applet-config.json). */
+export async function getFirebaseConfig(): Promise<FirebaseAppletConfig> {
+  return loadConfig();
+}
+
+async function ensureApp(): Promise<FirebaseApp> {
+  if (app) return app;
+  const [{ initializeApp }, config] = await Promise.all([
+    import('firebase/app'),
+    loadConfig(),
+  ]);
+  app = initializeApp(config);
+  return app;
+}
+
+/** Firebase Auth — Google popup ve Phone SMS OTP için dinamik yüklenir. */
+export async function getFirebaseAuth(): Promise<Auth> {
+  if (!authReady) {
+    authReady = (async () => {
+      const [{ getAuth }, firebaseApp] = await Promise.all([
+        import('firebase/auth'),
+        ensureApp(),
+      ]);
+      return getAuth(firebaseApp);
+    })();
+  }
+  return authReady;
+}
+
+async function getFirestoreDb(): Promise<Firestore> {
+  if (!dbReady) {
+    dbReady = (async () => {
+      const [{ getFirestore }, firebaseApp, config] = await Promise.all([
+        import('firebase/firestore'),
+        ensureApp(),
+        loadConfig(),
+      ]);
+      return config.firestoreDatabaseId
+        ? getFirestore(firebaseApp, config.firestoreDatabaseId)
+        : getFirestore(firebaseApp);
+    })();
+  }
+  return dbReady;
+}
+
 export async function saveLead(lead: {
   name: string;
   email: string;
@@ -39,6 +100,8 @@ export async function saveLead(lead: {
   ticketNumber: string;
 }) {
   try {
+    const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+    const db = await getFirestoreDb();
     const leadsCol = collection(db, 'leads');
     await addDoc(leadsCol, {
       ...lead,
@@ -50,9 +113,10 @@ export async function saveLead(lead: {
   }
 }
 
-// Collection helper for newsletter subscriptions
 export async function saveSubscriber(email: string) {
   try {
+    const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+    const db = await getFirestoreDb();
     const subscribersCol = collection(db, 'subscribers');
     await addDoc(subscribersCol, {
       email,
@@ -64,8 +128,9 @@ export async function saveSubscriber(email: string) {
   }
 }
 
-// Save user profile to Firestore
 export async function saveUserProfile(profile: UserProfile) {
+  const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+  const db = await getFirestoreDb();
   const userDocRef = doc(db, 'users', profile.uid);
   await setDoc(userDocRef, {
     ...profile,
@@ -73,9 +138,10 @@ export async function saveUserProfile(profile: UserProfile) {
   });
 }
 
-// Retrieve user profile from Firestore
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   try {
+    const { doc, getDoc } = await import('firebase/firestore');
+    const db = await getFirestoreDb();
     const userDocRef = doc(db, 'users', uid);
     const docSnap = await getDoc(userDocRef);
     if (docSnap.exists()) {

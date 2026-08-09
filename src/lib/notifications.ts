@@ -69,7 +69,7 @@ async function postNotificationsOnce(
     const msg =
       (data.message as string) ||
       (res.status === 429
-        ? 'Çok fazla istek. Bir dakika bekleyin.'
+        ? 'Çok fazla istek. Kısa süre bekleyip tekrar deneyin.'
         : res.status >= 500
           ? 'Sunucu bildirimlere yanıt veremedi.'
           : `Bildirim işlemi başarısız (HTTP ${res.status}).`);

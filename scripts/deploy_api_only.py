@@ -7,7 +7,7 @@ from pathlib import Path
 
 import paramiko
 
-from deploy_common import USER, require_deploy_host, require_deploy_pass
+from deploy_common import USER, require_deploy_host, require_deploy_pass, require_intelligence_regression_pass
 
 PASSWORD = require_deploy_pass()
 DEPLOY_HOST = require_deploy_host()
@@ -42,6 +42,9 @@ API_FILES = [
     ROOT / "api" / "escrow_jobs_lib.php",
     ROOT / "api" / "escrow_room_lib.php",
     ROOT / "api" / "escrow_room.php",
+    ROOT / "api" / "verification_lib.php",
+    ROOT / "api" / "demo_lib.php",
+    ROOT / "api" / "demo.php",
     ROOT / "api" / "tl_havale_lib.php",
     ROOT / "api" / "tl_mode_lib.php",
     ROOT / "api" / "protocol_constants.php",
@@ -68,6 +71,8 @@ def run(ssh: paramiko.SSHClient, cmd: str) -> tuple[int, str, str]:
 
 
 def main() -> int:
+    require_intelligence_regression_pass()
+
     missing = [str(p) for p in API_FILES if not p.is_file()]
     if missing:
         print("Missing API files:", ", ".join(missing))

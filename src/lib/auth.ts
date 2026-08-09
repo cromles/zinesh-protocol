@@ -1,7 +1,6 @@
 import type { UserProfile } from './userProfile';
 import { resolveIsFounder } from './founder';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from './firebase';
+import { getFirebaseAuth } from './firebase';
 import { getGoogleAccessTokenViaGsi, ZINESH_GOOGLE_CLIENT_ID } from './googleGsi';
 import { apiUrl } from './apiBase';
 
@@ -305,9 +304,13 @@ export function loginWithApi(
   });
 }
 
-const GOOGLE_AUTH_BRIDGE = 'https://decisive-patrol-dszp9.firebaseapp.com/google-auth.html';
+const GOOGLE_AUTH_BRIDGE = 'https://zinesh.firebaseapp.com/google-auth.html';
 
 async function getGoogleIdTokenDirect(): Promise<string> {
+  const [{ GoogleAuthProvider, signInWithPopup }, auth] = await Promise.all([
+    import('firebase/auth'),
+    getFirebaseAuth(),
+  ]);
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
   const cred = await signInWithPopup(auth, provider);
@@ -803,6 +806,33 @@ export async function submitKyc(fields: {
   };
 }
 
+export async function confirmPhoneWithFirebase(idToken: string): Promise<{ message: string; user: UserProfile }> {
+  let res: Response;
+  try {
+    res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'verify_phone_firebase',
+        idToken,
+        ...authPayload(),
+      }),
+    });
+  } catch {
+    throw new Error('Sunucuya bağlanılamadı.');
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.user) {
+    throw new Error(data.message || 'Telefon doğrulanamadı.');
+  }
+  const user = data.user as UserProfile;
+  saveSession(user);
+  return {
+    message: data.message || 'Telefon doğrulandı.',
+    user,
+  };
+}
+
 async function postAuthAction(body: Record<string, string>): Promise<Record<string, unknown>> {
   let res: Response;
   try {
@@ -883,6 +913,21 @@ export async function changePassword(
     message: (data.message as string) || 'Şifre güncellendi.',
     requiresLogin: Boolean(data.requiresLogin),
   };
+}
+
+export async function updateProfileName(name: string): Promise<UserProfile> {
+  const data = await postAuthAction({
+    action: 'update_profile',
+    name: name.trim(),
+    ...authPayload(),
+  });
+  if (!data.user) {
+    throw new Error((data.message as string) || 'Profil güncellenemedi.');
+  }
+  const user = data.user as UserProfile;
+  const merged = { ...getSession(), ...user };
+  saveSession(merged);
+  return merged;
 }
 
 export async function sendTotpResetCode(

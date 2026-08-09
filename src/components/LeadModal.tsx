@@ -7,9 +7,8 @@ import {
   Check, 
   Lock, 
   User, 
-  Fingerprint, 
-  ArrowRight,
   ShieldAlert,
+  ArrowRight,
   Eye,
   EyeOff,
   Loader2,
@@ -20,8 +19,10 @@ import { loginWithApi, markWelcomeSeen, registerWithApi, loginWithGoogleGsi, Aut
 import { clearPendingReferralCode, normalizeReferralCode } from '../lib/referral';
 import { OAUTH_PROVIDERS } from '../lib/oauthProviders';
 import ForgotPasswordPanel from './ForgotPasswordPanel';
+import ZineshFrame from './ZineshFrame';
 import { apiUrl } from '../lib/apiBase';
 import { displayMemberTicket } from '../lib/memberTicket';
+import { fetchDemoStatus, loginDemoRole, isDemoUiEnabled, type DemoRole } from '../lib/demoMode';
 
 function parseTotpSetupSecret(uri: string | null): string | null {
   if (!uri) return null;
@@ -119,9 +120,10 @@ function PasswordField({
         required
         placeholder="Şifre"
         autoComplete={autoComplete}
+        aria-label="Şifre"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 pr-11 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-purple-500/30 transition-colors"
+        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 pr-11 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500/40 transition-colors"
       />
       <button
         type="button"
@@ -142,6 +144,7 @@ interface LeadModalProps {
   onEnterAlpha?: (user: UserProfile) => void;
   initialReferralCode?: string;
   referralInvite?: boolean;
+  preferredAuthTab?: 'login' | 'register';
   oauthState?: string;
   oauthNeedsTotp?: '1' | 'setup';
   oauthLinkState?: string;
@@ -155,6 +158,7 @@ export default function LeadModal({
   onEnterAlpha,
   initialReferralCode = '',
   referralInvite = false,
+  preferredAuthTab,
   oauthState = '',
   oauthNeedsTotp,
   oauthLinkState = '',
@@ -185,6 +189,8 @@ export default function LeadModal({
   const [verificationExpiresAt, setVerificationExpiresAt] = useState<number | null>(null);
   const [emailResendAvailableAt, setEmailResendAvailableAt] = useState<number | null>(null);
   const [verificationSecondsLeft, setVerificationSecondsLeft] = useState(0);
+  const [demoEnabled, setDemoEnabled] = useState(false);
+  const [demoLoading, setDemoLoading] = useState<DemoRole | null>(null);
   const [verificationCodeExpired, setVerificationCodeExpired] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -225,6 +231,12 @@ export default function LeadModal({
       setLoadingMode('register');
     }
   }, [isOpen, initialReferralCode, referralInvite]);
+
+  useEffect(() => {
+    if (!isOpen || !preferredAuthTab) return;
+    setActiveTab(preferredAuthTab);
+    setShowForgotPassword(false);
+  }, [isOpen, preferredAuthTab]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -273,6 +285,35 @@ export default function LeadModal({
       /* ignore */
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!isDemoUiEnabled()) {
+      setDemoEnabled(false);
+      return;
+    }
+    setDemoEnabled(true);
+    fetchDemoStatus().then((status) => {
+      if (!status.apiOnline) {
+        setDemoEnabled(true);
+      }
+    });
+  }, [isOpen]);
+
+  const handleDemoLogin = async (role: DemoRole) => {
+    setDemoLoading(role);
+    setErrorMsg('');
+    try {
+      const { user } = await loginDemoRole(role);
+      const profile = user as unknown as UserProfile;
+      markWelcomeSeen(profile.uid);
+      onEnterAlpha(profile);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Demo girişi başarısız.');
+    } finally {
+      setDemoLoading(null);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen || step !== 'form' || activeTab !== 'register') return;
@@ -731,17 +772,25 @@ export default function LeadModal({
             resetModal();
             onClose();
           }}
-          className="absolute inset-0 bg-black/85 backdrop-blur-md"
+          className="absolute inset-0 bg-slate-950/85 backdrop-blur-md"
+          aria-hidden="true"
         />
 
         {/* Modal Outer Container */}
         <motion.div
           ref={modalBodyRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="lead-modal-title"
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-xl max-h-[92dvh] sm:max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain rounded-t-3xl sm:rounded-3xl border border-white/10 bg-zinc-950 p-4 sm:p-6 md:p-8 shadow-2xl z-10 safe-pad-b pt-[max(1rem,env(safe-area-inset-top,0px))] sm:pt-6 min-w-0"
+          className="relative w-full max-w-xl max-h-[92dvh] sm:max-h-[90vh] z-10"
         >
+          <ZineshFrame
+            accent
+            className="zinesh-frame-modal relative max-h-[92dvh] sm:max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain p-4 sm:p-6 md:p-8 shadow-2xl safe-pad-b pt-[max(1rem,env(safe-area-inset-top,0px))] sm:pt-6 min-w-0 border border-slate-800 bg-slate-900"
+          >
           {/* Top Close Button */}
           <button 
             type="button"
@@ -749,20 +798,21 @@ export default function LeadModal({
               resetModal();
               onClose();
             }}
+            aria-label="Pencereyi kapat"
             className="absolute top-3 right-3 sm:top-4 sm:right-4 h-11 w-11 flex items-center justify-center rounded-full border border-white/5 text-zinc-400 hover:text-white hover:bg-white/5 transition cursor-pointer touch-target"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" aria-hidden />
           </button>
 
           {/* STEP 1: Auth & Register Flow */}
           {step === 'form' && (
             <div className="space-y-6">
               <div className="text-center md:text-left">
-                <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 mb-4">
-                  <Fingerprint className="h-5 w-5 animate-pulse" />
+                <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-slate-950 mb-4 shadow-md shadow-emerald-950/40" aria-hidden>
+                  <ShieldCheck className="h-5 w-5" />
                 </div>
-                <h3 className="font-display text-2xl font-bold text-white tracking-tight">
-                  {activeTab === 'register' ? 'Zinesh\'e Katıl' : 'Tekrar Hoş Geldin'}
+                <h3 id="lead-modal-title" className="font-display text-2xl font-bold text-white tracking-tight">
+                  {activeTab === 'register' ? 'Zinesh hesabı oluştur' : 'Tekrar hoş geldin'}
                 </h3>
                 <p className="font-sans text-sm text-zinc-400 mt-1">
                   {referralInvite && referralCode
@@ -774,11 +824,11 @@ export default function LeadModal({
               </div>
 
               {referralInvite && referralCode && activeTab === 'register' && (
-                <div className="rounded-xl border border-purple-500/25 bg-purple-500/10 px-4 py-3">
-                  <p className="text-xs text-purple-100 font-medium">
-                    Davet kodu: <span className="font-mono text-purple-200">{referralCode}</span>
+                <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3">
+                  <p className="text-xs text-emerald-100 font-medium">
+                    Davet kodu: <span className="font-mono text-emerald-200">{referralCode}</span>
                   </p>
-                  <p className="text-[11px] text-purple-200/80 mt-1 leading-relaxed">
+                  <p className="text-[11px] text-emerald-200/80 mt-1 leading-relaxed">
                     Kayıt olup e-postanı doğruladığında davet eden kişiye referans yazılır.
                   </p>
                 </div>
@@ -786,34 +836,38 @@ export default function LeadModal({
 
               {/* Login / Register Tab Selectors */}
               {!showForgotPassword && (
-              <div className="flex bg-zinc-900/80 p-1 rounded-xl border border-white/5">
+              <div className="flex rounded-xl border border-slate-800 bg-slate-950/80 p-1" role="tablist" aria-label="Giriş türü">
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={activeTab === 'register'}
                   onClick={() => {
                     setActiveTab('register');
                     setErrorMsg('');
                   }}
-                  className={`flex-1 min-h-[44px] py-2.5 rounded-lg font-sans text-xs font-semibold tracking-wide transition-all cursor-pointer ${
-                    activeTab === 'register' 
-                      ? 'bg-zinc-800 text-white shadow-md' 
-                      : 'text-zinc-400 hover:text-zinc-300'
+                  className={`flex-1 min-h-[44px] cursor-pointer rounded-lg py-2.5 font-sans text-xs font-semibold tracking-wide transition-all ${
+                    activeTab === 'register'
+                      ? 'bg-emerald-500 text-slate-950 shadow-md'
+                      : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  🛡️ Üye Ol
+                  Kayıt Ol
                 </button>
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={activeTab === 'login'}
                   onClick={() => {
                     setActiveTab('login');
                     setErrorMsg('');
                   }}
-                  className={`flex-1 min-h-[44px] py-2.5 rounded-lg font-sans text-xs font-semibold tracking-wide transition-all cursor-pointer ${
-                    activeTab === 'login' 
-                      ? 'bg-zinc-800 text-white shadow-md' 
-                      : 'text-zinc-400 hover:text-zinc-300'
+                  className={`flex-1 min-h-[44px] cursor-pointer rounded-lg py-2.5 font-sans text-xs font-semibold tracking-wide transition-all ${
+                    activeTab === 'login'
+                      ? 'bg-emerald-500 text-slate-950 shadow-md'
+                      : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  🔐 Giriş Yap
+                  Giriş Yap
                 </button>
               </div>
               )}
@@ -873,38 +927,44 @@ export default function LeadModal({
                   <div className="space-y-4">
                     {/* Full Name */}
                     <div>
-                      <label className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
-                        <User className="h-3 w-3" /> Katılımcı / Kurum Adı
+                      <label htmlFor="register-name" className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                        <User className="h-3 w-3" aria-hidden /> Katılımcı / Kurum Adı
                       </label>
                       <input
+                        id="register-name"
                         type="text"
                         required
+                        name="name"
+                        autoComplete="name"
                         placeholder="Örn. Sarah Chen veya Genesis Labs"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-purple-500/30 transition-colors"
+                        className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500/30 transition-colors"
                       />
                     </div>
 
                     {/* Email */}
                     <div>
-                      <label className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
-                        <Mail className="h-3 w-3" /> E-posta Adresi
+                      <label htmlFor="register-email" className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                        <Mail className="h-3 w-3" aria-hidden /> E-posta Adresi
                       </label>
                       <input
+                        id="register-email"
                         type="email"
                         required
+                        name="email"
+                        autoComplete="email"
                         placeholder="sarah@genesislabs.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-purple-500/30 transition-colors"
+                        className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500/30 transition-colors"
                       />
                     </div>
 
                     {/* Password */}
                     <div>
-                      <label className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
-                        <Lock className="h-3 w-3" /> Güvenli Şifre
+                      <label htmlFor="register-password" className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                        <Lock className="h-3 w-3" aria-hidden /> Güvenli Şifre
                       </label>
                       <PasswordField
                         id="register-password"
@@ -918,21 +978,24 @@ export default function LeadModal({
                   </div>
 
                   <div>
-                    <label className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider block mb-1.5">
+                    <label htmlFor="register-referral" className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider block mb-1.5">
                       Davet Kodu {referralInvite ? '' : '(isteğe bağlı)'}
                     </label>
                     <input
+                      id="register-referral"
                       type="text"
+                      name="referralCode"
+                      aria-label="Davet kodu"
                       placeholder="8 haneli davet kodu"
                       value={referralCode}
                       readOnly={referralInvite && !!referralCode}
                       onChange={(e) => setReferralCode(normalizeReferralCode(e.target.value))}
-                      className={`w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-purple-500/30 transition-colors ${
-                        referralInvite && referralCode ? 'font-mono tracking-wider text-purple-200' : ''
+                      className={`w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500/30 transition-colors ${
+                        referralInvite && referralCode ? 'font-mono tracking-wider text-emerald-200' : ''
                       }`}
                     />
                     {referralCode && (
-                      <p className="mt-1.5 text-[10px] text-purple-300/90">
+                      <p className="mt-1.5 text-[10px] text-emerald-300/90">
                         Davet kodu kayıt formuna eklendi. Kayıt ve e-posta doğrulaması sonrası davet eden kişiye sayılır.
                       </p>
                     )}
@@ -945,7 +1008,7 @@ export default function LeadModal({
                   <button
                     ref={submitBtnRef}
                     type="submit"
-                    className="w-full py-4 rounded-xl bg-white text-black font-semibold text-sm hover:bg-zinc-200 transition cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full cursor-pointer rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-4 font-semibold text-sm text-slate-950 shadow-lg shadow-emerald-950/40 transition hover:from-emerald-400 hover:to-teal-400 flex items-center justify-center gap-2"
                   >
                     Kayıt Ol
                   </button>
@@ -956,23 +1019,26 @@ export default function LeadModal({
                   <div className="space-y-4 min-w-0">
                     {/* Email */}
                     <div>
-                      <label className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
-                        <Mail className="h-3 w-3" /> Kayıtlı E-posta Adresi
+                      <label htmlFor="login-email" className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                        <Mail className="h-3 w-3" aria-hidden /> Kayıtlı E-posta Adresi
                       </label>
                       <input
+                        id="login-email"
                         type="email"
                         required
+                        name="email"
+                        autoComplete="email"
                         placeholder="sarah@genesislabs.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-purple-500/30 transition-colors"
+                        className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500/30 transition-colors"
                       />
                     </div>
 
                     {/* Password */}
                     <div>
-                      <label className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
-                        <Lock className="h-3 w-3" /> Güvenli Şifre
+                      <label htmlFor="login-password" className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                        <Lock className="h-3 w-3" aria-hidden /> Güvenli Şifre
                       </label>
                       <PasswordField
                         id="login-password"
@@ -988,7 +1054,7 @@ export default function LeadModal({
                             type="checkbox"
                             checked={rememberMe}
                             onChange={(e) => setRememberMe(e.target.checked)}
-                            className="h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-purple-500 focus:ring-purple-500/40"
+                            className="h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-emerald-500 focus:ring-emerald-500/40"
                           />
                           Beni hatırla
                         </label>
@@ -998,7 +1064,7 @@ export default function LeadModal({
                             setShowForgotPassword(true);
                             setErrorMsg('');
                           }}
-                          className="text-[11px] text-purple-400 hover:text-purple-300 transition cursor-pointer shrink-0"
+                          className="text-[11px] text-emerald-400 hover:text-emerald-300 transition cursor-pointer shrink-0"
                         >
                           Şifremi Unuttum
                         </button>
@@ -1006,15 +1072,15 @@ export default function LeadModal({
                     </div>
 
                     {needsLoginVerification && (
-                      <div className="rounded-xl border border-purple-500/25 bg-purple-950/10 p-4 space-y-3">
-                        <label className="font-mono text-[10px] text-purple-200/90 uppercase tracking-wider block flex items-center gap-1">
-                          <ShieldAlert className="h-3 w-3" />
+                      <div className="rounded-xl border border-emerald-500/25 bg-emerald-950/10 p-4 space-y-3">
+                        <label htmlFor="login-verification-code" className="font-mono text-[10px] text-emerald-200/90 uppercase tracking-wider block flex items-center gap-1">
+                          <ShieldAlert className="h-3 w-3" aria-hidden />
                           E-posta doğrulama kodu (6 hane)
                         </label>
                         <p className="text-[11px] text-zinc-400 leading-relaxed">
                           E-posta doğrulaması gerekli. Kayıtlı adresine gönderilen 6 haneli kodu gir (15 dakika geçerli).
                         </p>
-                        <p className="font-mono text-[11px] text-purple-200/90">
+                        <p className="font-mono text-[11px] text-emerald-200/90">
                           Kod geçerlilik süresi:{' '}
                           <span className="tabular-nums">{formatCountdown(verificationSecondsLeft)}</span>
                         </p>
@@ -1022,6 +1088,7 @@ export default function LeadModal({
                           <p className="text-[11px] text-red-300/90 font-medium">Kod süresi doldu.</p>
                         ) : null}
                         <input
+                          id="login-verification-code"
                           type="text"
                           inputMode="numeric"
                           pattern="[0-9]{6}"
@@ -1030,16 +1097,17 @@ export default function LeadModal({
                           disabled={verificationCodeExpired}
                           placeholder="123456"
                           autoComplete="one-time-code"
+                          aria-label="E-posta doğrulama kodu"
                           value={loginVerificationCode}
                           onChange={(e) => setLoginVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                          className="w-full bg-zinc-900 border border-purple-500/20 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-purple-500/40 transition-colors font-mono tracking-widest text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full bg-zinc-900 border border-emerald-500/20 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500/40 transition-colors font-mono tracking-widest text-center disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         {!emailResendCooldownActive && (
                           <button
                             type="button"
                             disabled={resendLoading}
                             onClick={handleResendLoginCode}
-                            className="w-full py-2.5 rounded-xl border border-purple-500/30 text-purple-200 text-xs font-semibold hover:bg-purple-950/30 transition cursor-pointer disabled:opacity-50"
+                            className="w-full py-2.5 rounded-xl border border-emerald-500/30 text-emerald-200 text-xs font-semibold hover:bg-emerald-950/30 transition cursor-pointer disabled:opacity-50"
                           >
                             {resendLoading ? 'Gönderiliyor...' : 'Kodu Tekrar Gönder'}
                           </button>
@@ -1162,7 +1230,7 @@ export default function LeadModal({
                   <button
                     type="submit"
                     disabled={loginSubmitting}
-                    className="w-full py-4 rounded-xl bg-purple-600 text-white font-semibold text-sm hover:bg-purple-500 transition cursor-pointer flex items-center justify-center gap-2 border border-purple-500/20 hover:shadow-lg hover:shadow-purple-500/10 disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="w-full cursor-pointer rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-4 font-semibold text-sm text-slate-950 shadow-lg shadow-emerald-950/40 transition hover:from-emerald-400 hover:to-teal-400 disabled:cursor-not-allowed disabled:opacity-70 flex items-center justify-center gap-2"
                   >
                     {loginSubmitting ? (
                       <>
@@ -1175,6 +1243,38 @@ export default function LeadModal({
                   </button>
                 </form>
               )}
+
+              {demoEnabled && !showForgotPassword && step === 'form' && (
+                <div className="space-y-2 pt-2 border-t border-amber-500/20">
+                  <p className="font-mono text-[10px] uppercase tracking-wider text-amber-300/80 text-center">
+                    Demo modu — 50.000 TL
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      disabled={demoLoading !== null}
+                      onClick={() => void handleDemoLogin('employer')}
+                      className="min-h-[44px] rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-100 text-xs font-semibold hover:bg-amber-500/20 disabled:opacity-60"
+                    >
+                      {demoLoading === 'employer' ? '…' : 'Demo Employer'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={demoLoading !== null}
+                      onClick={() => void handleDemoLogin('worker')}
+                      className="min-h-[44px] rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-100 text-xs font-semibold hover:bg-amber-500/20 disabled:opacity-60"
+                    >
+                      {demoLoading === 'worker' ? '…' : 'Demo Worker'}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 text-center">
+                    Üye no: 90001 / 90002 ·{' '}
+                    <a href="/debug" className="text-amber-400/90 underline">
+                      /debug
+                    </a>
+                  </p>
+                </div>
+              )}
               </>
               )}
             </div>
@@ -1184,8 +1284,8 @@ export default function LeadModal({
           {step === 'loading' && (
             <div className="flex flex-col items-center justify-center py-16 space-y-6 text-center font-mono">
               <div className="relative flex h-16 w-16 items-center justify-center">
-                <span className="absolute animate-ping h-full w-full rounded-full bg-purple-500/20 opacity-75" />
-                <div className="h-10 w-10 border-2 border-t-purple-500 border-r-transparent border-l-transparent border-b-purple-500 rounded-full animate-spin" />
+                <span className="absolute animate-ping h-full w-full rounded-full bg-emerald-500/20 opacity-75" />
+                <div className="h-10 w-10 border-2 border-t-emerald-500 border-r-transparent border-l-transparent border-b-emerald-500 rounded-full animate-spin" />
               </div>
               
               <div className="space-y-2">
@@ -1255,7 +1355,7 @@ export default function LeadModal({
                   </div>
                   <div>
                     <span className="font-mono text-[9px] text-zinc-400 uppercase block">KAYIT SERİ BİLET:</span>
-                    <span className="font-mono text-xs font-semibold text-purple-400 block">{displayMemberTicket(ticketNumber)}</span>
+                    <span className="font-mono text-xs font-semibold text-emerald-400 block">{displayMemberTicket(ticketNumber)}</span>
                   </div>
                   <div>
                     <span className="font-mono text-[9px] text-zinc-400 uppercase block">GÜVEN PUANI:</span>
@@ -1338,6 +1438,7 @@ export default function LeadModal({
             </div>
           )}
 
+          </ZineshFrame>
         </motion.div>
       </div>
     </AnimatePresence>

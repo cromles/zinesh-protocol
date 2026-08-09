@@ -2,6 +2,10 @@
 declare(strict_types=1);
 
 function zinesh_client_ip(): string {
+    $cf = trim((string)($_SERVER['HTTP_CF_CONNECTING_IP'] ?? ''));
+    if ($cf !== '' && filter_var($cf, FILTER_VALIDATE_IP)) {
+        return $cf;
+    }
     $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
     if (str_contains($ip, ',')) {
         $ip = trim(explode(',', $ip)[0]);
@@ -9,27 +13,144 @@ function zinesh_client_ip(): string {
     return $ip;
 }
 
+function zinesh_rate_limit_retry_after_sec(): int {
+    $limits = zinesh_config()['rate_limits'] ?? [];
+    return max(5, min(60, (int)($limits['retry_after'] ?? 15)));
+}
+
+function zinesh_rate_limit_deny(string $bucket, string $ip, int $retryAfterSec): void {
+    $safeBucket = preg_replace('/[^a-z0-9:_-]/i', '', $bucket) ?: 'default';
+    if ($safeBucket !== 'global_api') {
+        zinesh_audit('rate_limit', ['bucket' => $bucket, 'ip' => $ip]);
+    }
+    $wait = max(1, $retryAfterSec);
+    if (!headers_sent()) {
+        header('Retry-After: ' . (string)$wait);
+    }
+    zinesh_json_response([
+        'ok' => false,
+        'message' => 'Çok fazla istek. Lütfen ' . $wait . ' saniye bekleyin.',
+        'retryAfter' => $wait,
+    ], 429);
+}
+
 function zinesh_rate_limit(string $bucket, int $max, int $windowSec = 60): void {
     $ip = zinesh_client_ip();
-    $key = preg_replace('/[^a-z0-9:_-]/i', '', $bucket) . ':' . $ip;
+    $safeBucket = preg_replace('/[^a-z0-9:_-]/i', '', $bucket) ?: 'default';
+    $key = $safeBucket . ':' . hash('sha256', $ip);
     $now = time();
+    $retryAfterSec = zinesh_rate_limit_retry_after_sec();
     $blocked = false;
+    $retryWait = $retryAfterSec;
 
-    zinesh_json_atomic('rate_limits.json', static function (array &$limits) use ($key, $max, $windowSec, $now, &$blocked) {
-        $entry = $limits[$key] ?? ['count' => 0, 'reset' => $now + $windowSec];
-        if ($now > (int)($entry['reset'] ?? 0)) {
-            $entry = ['count' => 0, 'reset' => $now + $windowSec];
+    // IP başına ayrı temp dosya — tek rate_limits.json dosyasına DDoS yükü bindirmez
+    $dir = sys_get_temp_dir() . '/zinesh_rate_limit';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0700, true);
+    }
+    $path = $dir . '/' . $key . '.json';
+    $fp = @fopen($path, 'c+');
+    if ($fp === false) {
+        return;
+    }
+
+    try {
+        if (!flock($fp, LOCK_EX)) {
+            return;
         }
-        $entry['count'] = (int)($entry['count'] ?? 0) + 1;
-        $limits[$key] = $entry;
-        $blocked = $entry['count'] > $max;
-        return true;
-    });
+        $raw = stream_get_contents($fp);
+        $entry = json_decode($raw ?: '{}', true);
+        if (!is_array($entry)) {
+            $entry = [];
+        }
+
+        $penaltyUntil = (int)($entry['penalty_until'] ?? 0);
+        if ($penaltyUntil > $now) {
+            $blocked = true;
+            $retryWait = max(1, $penaltyUntil - $now);
+        } else {
+            if ($penaltyUntil > 0) {
+                unset($entry['penalty_until']);
+                $entry['count'] = min((int)($entry['count'] ?? 0), max(1, (int)floor($max * 0.85)));
+            }
+            if ($now > (int)($entry['reset'] ?? 0)) {
+                $entry = ['count' => 0, 'reset' => $now + $windowSec];
+            }
+            $entry['count'] = (int)($entry['count'] ?? 0) + 1;
+            if ($entry['count'] > $max) {
+                $entry['penalty_until'] = $now + $retryAfterSec;
+                $blocked = true;
+                $retryWait = $retryAfterSec;
+            }
+        }
+
+        ftruncate($fp, 0);
+        rewind($fp);
+        fwrite($fp, json_encode($entry));
+        fflush($fp);
+        flock($fp, LOCK_UN);
+    } finally {
+        fclose($fp);
+    }
 
     if ($blocked) {
-        zinesh_audit('rate_limit', ['bucket' => $bucket, 'ip' => $ip]);
-        zinesh_json_response(['message' => 'Çok fazla istek. Lütfen bir dakika bekleyin.'], 429);
+        zinesh_rate_limit_deny($bucket, $ip, $retryWait);
     }
+}
+
+/** Tüm API uçları için IP başına genel sınır (zinesh_security_headers içinde). */
+function zinesh_api_global_rate_limit(): void {
+    $limits = zinesh_config()['rate_limits'] ?? [];
+    $max = (int)($limits['global_api'] ?? 180);
+    if ($max <= 0) {
+        return;
+    }
+    zinesh_rate_limit('global_api', $max, 60);
+}
+
+function zinesh_api_register_handlers(): void {
+    static $registered = false;
+    if ($registered) {
+        return;
+    }
+    $registered = true;
+
+    set_exception_handler(static function (Throwable $e): void {
+        error_log('zinesh_api_uncaught: ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+        if (headers_sent()) {
+            return;
+        }
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store');
+        echo json_encode([
+            'ok' => false,
+            'message' => 'Sunucu hatası. Lütfen kısa süre sonra tekrar deneyin.',
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    });
+
+    register_shutdown_function(static function (): void {
+        $err = error_get_last();
+        if ($err === null) {
+            return;
+        }
+        $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
+        if (!in_array($err['type'], $fatalTypes, true)) {
+            return;
+        }
+        error_log('zinesh_api_fatal: ' . ($err['message'] ?? '') . ' @ ' . ($err['file'] ?? '') . ':' . ($err['line'] ?? ''));
+        if (headers_sent()) {
+            return;
+        }
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store');
+        echo json_encode([
+            'ok' => false,
+            'message' => 'Sunucu hatası. Lütfen kısa süre sonra tekrar deneyin.',
+        ], JSON_UNESCAPED_UNICODE);
+    });
 }
 
 function zinesh_audit(string $action, array $meta = []): void {
@@ -196,6 +317,26 @@ function zinesh_load_server_secrets(): array {
     }
     $data = json_decode((string)file_get_contents($path), true);
     return is_array($data) ? $data : [];
+}
+
+/** PHP-FPM (www-data) SMTP/API anahtarlarını okuyabilsin; dışarıya kapalı kalsın. */
+function zinesh_secure_secrets_file(string $path): void {
+    if (!is_file($path)) {
+        return;
+    }
+    @chmod($path, 0660);
+    if (!function_exists('posix_geteuid') || posix_geteuid() !== 0) {
+        return;
+    }
+    foreach (['www-data', 'www'] as $user) {
+        $info = posix_getpwnam($user);
+        if ($info === false) {
+            continue;
+        }
+        @chown($path, (int)$info['uid']);
+        @chgrp($path, (int)$info['gid']);
+        break;
+    }
 }
 
 function zinesh_admin_secret(): string {
@@ -377,7 +518,7 @@ function zinesh_login_send_verification_email(string $email, string $name, strin
     require_once __DIR__ . '/email_lib.php';
     $safeName = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
     $safeCode = htmlspecialchars($code, ENT_QUOTES, 'UTF-8');
-    $subject = 'Zinesh giriş doğrulama kodun: ' . $code;
+    $subject = 'Zinesh — Giriş doğrulama kodun';
     $html = <<<HTML
 <!DOCTYPE html>
 <html lang="tr">
@@ -554,6 +695,8 @@ function zinesh_login_record_failure(string $email): array {
 }
 
 function zinesh_security_headers(): void {
+    zinesh_api_register_handlers();
+    zinesh_api_global_rate_limit();
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: DENY');
     header('Referrer-Policy: no-referrer');

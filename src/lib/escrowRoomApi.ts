@@ -1,7 +1,9 @@
 import { getSession, getSessionToken } from './auth';
 import { bumpSessionActivity } from './sessionIdle';
 import { apiUrl } from './apiBase';
+import { parseContractVerificationError } from './contractVerification';
 import { normalizeMemberTicket } from './memberTicket';
+import { recordEscrowApiCall, recordEscrowApiError } from './escrowDebugTrace';
 import type { WalletState } from './walletApi';
 
 const API = apiUrl('/api/escrow_room.php');
@@ -12,6 +14,7 @@ export type EscrowRoomStatus =
   | 'locking'
   | 'locked'
   | 'completion_pending'
+  | 'settling'
   | 'completed'
   | 'cancelled'
   | 'disputed'
@@ -21,6 +24,10 @@ export type EscrowRoomRole = 'employer' | 'worker';
 
 export interface EscrowRoomDispute {
   filedByUid: string;
+  feePaidByUid?: string;
+  depositTry?: number;
+  depositSource?: string;
+  depositDisposition?: string;
   reason: string;
   evidence?: string;
   filedAt: string;
@@ -28,6 +35,7 @@ export interface EscrowRoomDispute {
   fault?: string;
   adminNote?: string;
   resolvedAt?: string;
+  commissionTry?: number;
   totalFeesTry?: number;
   workerPayoutTry?: number;
   employerRefundTry?: number;
@@ -54,8 +62,13 @@ export interface EscrowRoom {
   employerConfirmedComplete: boolean;
   workerConfirmedComplete: boolean;
   disputeFeeTry: number;
+  disputeDepositTry?: number;
+  termsProposedBy?: 'employer' | 'worker';
+  termsChangeRequested?: boolean;
+  termsChangeNote?: string;
   myRole: EscrowRoomRole | null;
   createdAt: string;
+  termsProposedAt?: string;
   lockedAt: string;
   completedAt: string;
   dispute: EscrowRoomDispute | null;
@@ -81,6 +94,7 @@ function token(): string {
 }
 
 async function postRoom(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const action = typeof body.action === 'string' ? body.action : 'unknown';
   const session = getSession();
   const payload = {
     ...body,
@@ -96,6 +110,7 @@ async function postRoom(body: Record<string, unknown>): Promise<Record<string, u
       body: JSON.stringify(payload),
     });
   } catch {
+    recordEscrowApiError(action, 'Sunucuya bağlanılamadı.');
     throw new Error('Sunucuya bağlanılamadı.');
   }
   const raw = await res.text();
@@ -104,11 +119,12 @@ async function postRoom(body: Record<string, unknown>): Promise<Record<string, u
     data = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
   } catch {
     if (!res.ok) {
-      throw new Error(
+      const netErr =
         res.status === 401
           ? 'Oturum süresi dolmuş. Lütfen tekrar giriş yapın.'
-          : `Sunucu yanıtı okunamadı (HTTP ${res.status}). Sayfayı yenileyip tekrar deneyin.`,
-      );
+          : `Sunucu yanıtı okunamadı (HTTP ${res.status}). Sayfayı yenileyip tekrar deneyin.`;
+      recordEscrowApiError(action, netErr);
+      throw new Error(netErr);
     }
   }
 
@@ -116,6 +132,10 @@ async function postRoom(body: Record<string, unknown>): Promise<Record<string, u
     typeof data.message === 'string' && data.message.trim() ? data.message.trim() : '';
 
   if (!res.ok) {
+    if (res.status === 403 && data.code === 'verification_required') {
+      recordEscrowApiError(action, serverMessage || 'Doğrulama gerekli.');
+      throw parseContractVerificationError(data, serverMessage || 'Doğrulama gerekli.');
+    }
     const msg =
       serverMessage ||
       (res.status === 401
@@ -125,13 +145,16 @@ async function postRoom(body: Record<string, unknown>): Promise<Record<string, u
           : res.status === 502
             ? 'Sunucu geçici olarak yanıt veremedi. Sayfayı yenileyip tekrar dene.'
             : `İşlem başarısız (HTTP ${res.status}).`);
+    recordEscrowApiError(action, msg);
     throw new Error(msg);
   }
 
   if (data.ok === false) {
+    recordEscrowApiCall(action, res.status, data, false);
     throw new Error(serverMessage || 'İşlem başarısız.');
   }
 
+  recordEscrowApiCall(action, res.status, data, true);
   bumpSessionActivity();
   return data;
 }
@@ -223,6 +246,57 @@ export async function confirmEscrowComplete(
   };
 }
 
+export interface EscrowTimelineEntry {
+  id: string;
+  event: string;
+  actor: string;
+  actor_label: string;
+  date: string;
+  description: string;
+  payload?: Record<string, unknown>;
+}
+
+export async function fetchEscrowRoomTimeline(
+  roomId: string,
+): Promise<{ timeline: EscrowTimelineEntry[]; aiContext?: Record<string, unknown> }> {
+  const data = await postRoom({ action: 'timeline', roomId });
+  return {
+    timeline: (data.timeline as EscrowTimelineEntry[]) ?? [],
+    aiContext: data.aiContext as Record<string, unknown> | undefined,
+  };
+}
+
+export async function rejectEscrowTerms(roomId: string, reason = ''): Promise<EscrowRoom> {
+  const data = await postRoom({ action: 'reject_terms', roomId, reason });
+  if (!data.room) throw new Error('Teklif reddedilemedi.');
+  return data.room as EscrowRoom;
+}
+
+export async function requestEscrowChanges(roomId: string, note: string): Promise<EscrowRoom> {
+  const data = await postRoom({ action: 'request_changes', roomId, note });
+  if (!data.room) throw new Error('Talep iletilemedi.');
+  return data.room as EscrowRoom;
+}
+
+export async function counterEscrowOffer(
+  roomId: string,
+  amountTry: number,
+  title: string,
+  description: string,
+  requestCollateral: boolean,
+): Promise<EscrowRoom> {
+  const data = await postRoom({
+    action: 'counter_offer',
+    roomId,
+    amountTry,
+    title,
+    description,
+    requestCollateral,
+  });
+  if (!data.room) throw new Error('Karşı teklif gönderilemedi.');
+  return data.room as EscrowRoom;
+}
+
 export async function fileEscrowDispute(
   roomId: string,
   reason: string,
@@ -254,6 +328,7 @@ export function escrowRoomStatusLabel(status: EscrowRoomStatus, role?: EscrowRoo
     locking: 'Kilitleniyor…',
     locked: 'Kilitli — iş devam ediyor',
     completion_pending: 'Tamamlama onayı',
+    settling: 'Ödeme işleniyor…',
     completed: 'Tamamlandı',
     cancelled: 'İptal edildi',
     disputed: 'Şikayet açık',
@@ -278,9 +353,15 @@ export function escrowRoomNextAction(room: EscrowRoom): {
     return { hint: 'İş veren teklif gönderecek.', urgent: false };
   }
   if (room.status === 'terms_pending' && role === 'worker' && room.agreedAmountTry > 0) {
-    return { hint: `${room.agreedAmountTry} TL teklif geldi — onaylayınca iş başlar.`, cta: 'Teklifi onayla', urgent: true };
+    if (room.termsProposedBy === 'worker') {
+      return { hint: 'Karşı teklifiniz işveren onayında.', urgent: false };
+    }
+    return { hint: `${room.agreedAmountTry} TL teklif geldi — onaylayın, reddedin veya karşı teklif verin.`, cta: 'Teklifi onayla', urgent: true };
   }
   if (room.status === 'terms_pending' && role === 'employer') {
+    if (room.termsProposedBy === 'worker' && room.agreedAmountTry > 0) {
+      return { hint: `${room.agreedAmountTry} TL karşı teklif — onaylayın veya yeni teklif gönderin.`, cta: 'Karşı teklifi onayla', urgent: true };
+    }
     return { hint: 'İş alanın teklifi onaylaması bekleniyor.', urgent: false };
   }
   if (['locked', 'completion_pending'].includes(room.status)) {

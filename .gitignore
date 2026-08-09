@@ -17,8 +17,9 @@ api/*.tmp
 api/fizi_market_lib.php.bak-*
 api/config.local.php
 api/secrets.json
-api/data/*.json
-api/data/users.json
+api/data/**
+!api/data/.htaccess
+!api/data/index.php
 
 *.bak
 *.bak-*
@@ -35,3 +36,12 @@ backups/
 scripts/__pycache__/
 *.pyc
 __pycache__/
+
+# Geçici test / cookie dosyaları (asla commit etme)
+.tmp-*
+.tmp-*/
+*.cookies
+
+# rclone credential (sunucuda /root/.config/rclone/rclone.conf)
+rclone.conf
+**/rclone.conf

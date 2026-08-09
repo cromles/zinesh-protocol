@@ -8,6 +8,8 @@ function zinesh_founder_health_data_files(): array {
         'sessions.json',
         'withdrawals.json',
         'escrow_rooms.json',
+        'zinesh_events.json',
+        'contract_versions.json',
         'havale_pending.json',
     ];
 }

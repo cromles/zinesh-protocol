@@ -46,7 +46,7 @@ function zinesh_totp_reset_cooldown_remaining(array $user): int {
 function zinesh_send_totp_reset_email(string $email, string $name, string $code): bool {
     $safeName = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
     $safeCode = htmlspecialchars($code, ENT_QUOTES, 'UTF-8');
-    $subject = 'Zinesh Authenticator sıfırlama kodun: ' . $code;
+    $subject = 'Zinesh — Authenticator sıfırlama kodun';
     $html = <<<HTML
 <!DOCTYPE html>
 <html lang="tr">

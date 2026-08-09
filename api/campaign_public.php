@@ -16,8 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     zinesh_json_response(['message' => 'method_not_allowed'], 405);
 }
 
-zinesh_json_response([
+zinesh_json_cached_response([
     'ok' => true,
     'campaign' => zinesh_campaign_public_status(),
     'earlyAccess' => zinesh_early_access_public(),
-]);
+], 120);

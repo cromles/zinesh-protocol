@@ -2,13 +2,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import WalletCenter from './WalletCenter';
 import EmailVerificationBanner from './EmailVerificationBanner';
 import NotificationBar from './NotificationBar';
-import KycVerificationCard from './KycVerificationCard';
 import FounderPlatformPanel from './FounderPlatformPanel';
 import FounderSystemHealthPanel from './FounderSystemHealthPanel';
 import FounderBalancePanel from './FounderBalancePanel';
 import EscrowRoomPanel from './EscrowRoomPanel';
-import { PANEL_GUIDES, NAV_CARDS, MOBILE_QUICK_LINKS, type ConsolePaneId } from './consolePanelCopy';
-import { showsPlatformWallet } from '../lib/consolePaneModes';
+import ProfileSettingsPanel from './ProfileSettingsPanel';
+import ConsoleDashboardOverview from './ConsoleDashboardOverview';
+import ConsoleSidebar from './ConsoleSidebar';
+import EslesmeSinyalCenter from './EslesmeSinyalCenter';
+import ContractVerificationModal from './ContractVerificationModal';
+import { PANEL_GUIDES, type ConsolePaneId } from './consolePanelCopy';
 import {
   fetchWalletState,
   fetchDepositAddresses,
@@ -20,14 +23,15 @@ import {
   type TlHavaleInfo,
 } from '../lib/walletApi';
 import { confirmEscrowComplete, requestEscrowRoomCancel } from '../lib/escrowRoomApi';
-import { formatMoney } from '../lib/currencyFormat';
 import { getSession, refreshSession, getSessionToken } from '../lib/auth';
 import { FALLBACK_DEPOSIT_ADDRESSES, mergeDepositAddresses } from '../lib/depositAddresses';
-
-const NAV_CARD_IDLE =
-  'bg-[rgba(255,255,255,0.015)] border border-amber-500/20 hover:border-amber-500/55 hover:shadow-[0_0_24px_rgba(245,158,11,0.08)] text-zinc-100 transition-all duration-300';
-const NAV_CARD_ACTIVE =
-  'bg-[rgba(255,255,255,0.025)] border border-amber-500/50 shadow-[0_0_28px_rgba(245,158,11,0.1)] text-white';
+import {
+  VERIFICATION_PROFILE_ANCHORS,
+  canCreateContract,
+  contractVerificationFromUser,
+  getMissingContractVerifications,
+  type VerificationTier,
+} from '../lib/contractVerification';
 
 interface AlphaConsoleProps {
   onBrowseLanding: () => void;
@@ -49,7 +53,15 @@ interface AlphaConsoleProps {
     foundingMember?: boolean;
     foundingMemberNumber?: number;
     kycStatus?: string;
+    phoneVerified?: boolean;
+    phoneMasked?: string;
+    kycVerified?: boolean;
     referralCode?: string;
+    createdAt?: string;
+    jobHistoryPublic?: boolean;
+    googleLinked?: boolean;
+    totpEnabled?: boolean;
+    signupRewardAmount?: number;
   };
 }
 
@@ -66,7 +78,6 @@ export default function AlphaConsole({
 
   const emailVerified = registeredUser?.emailVerified ?? false;
   const kycStatus = (registeredUser?.kycStatus as string) ?? 'none';
-  const kycApproved = kycStatus === 'approved';
   const sessionToken = registeredUser?.sessionToken ?? getSessionToken();
   const [flashToast, setFlashToast] = useState<string | null>(null);
 
@@ -84,7 +95,6 @@ export default function AlphaConsole({
   }, []);
 
   const pageGuide = PANEL_GUIDES[activePane];
-  const platformWalletPane = showsPlatformWallet(activePane);
   const username = registeredUser?.name || 'Üye';
 
   const [usdtBalance, setUsdtBalance] = useState(0);
@@ -119,13 +129,23 @@ export default function AlphaConsole({
   const [walletTxLogs, setWalletTxLogs] = useState<import('../lib/walletApi').WalletTransaction[]>([]);
   const [tlHavale, setTlHavale] = useState<TlHavaleInfo | undefined>(undefined);
   const [escrowRoomId, setEscrowRoomId] = useState<string | null>(null);
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+  const [verificationMissing, setVerificationMissing] = useState<VerificationTier[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notifPanelOpen, setNotifPanelOpen] = useState(false);
+
+  const contractReady = canCreateContract(registeredUser);
 
   const scrollToConsoleTarget = useCallback((targetId: string) => {
     window.requestAnimationFrame(() => {
       const el = document.getElementById(targetId);
-      if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }, []);
+
+  const goToHome = useCallback(() => {
+    onBrowseLanding();
+  }, [onBrowseLanding]);
 
   const goToPane = useCallback(
     (pane: ActivePane, scrollTarget?: string) => {
@@ -142,8 +162,49 @@ export default function AlphaConsole({
 
   const goToDeposit = useCallback(() => {
     setWalletTab('deposit');
-    goToPane('dashboard', 'wallet-center');
+    goToPane('cuzdan', 'wallet-center');
   }, [goToPane]);
+
+  const openNotifications = useCallback(() => {
+    setNotifPanelOpen(true);
+  }, []);
+
+  const handleSupport = useCallback(() => {
+    window.open('mailto:zinesh.protocol@gmail.com?subject=Zinesh%20Destek', '_blank', 'noopener,noreferrer');
+  }, []);
+
+  const openEscrowRoom = useCallback(
+    (roomId: string) => {
+      setEscrowRoomId(roomId);
+      goToPane('sozlesmelerim');
+    },
+    [goToPane],
+  );
+
+  const openVerificationModal = useCallback(() => {
+    const missing = getMissingContractVerifications(contractVerificationFromUser(registeredUser));
+    setVerificationMissing(missing);
+    setVerificationModalOpen(missing.length > 0);
+  }, [registeredUser]);
+
+  const handleGoToVerification = useCallback(
+    (tier: VerificationTier) => {
+      setVerificationModalOpen(false);
+      goToPane('bilgilerim', VERIFICATION_PROFILE_ANCHORS[tier]);
+    },
+    [goToPane],
+  );
+
+  const navigateToPane = useCallback(
+    (pane: ActivePane) => {
+      if (pane === 'hizmet-al' && !contractReady) {
+        openVerificationModal();
+        return;
+      }
+      goToPane(pane);
+    },
+    [contractReady, goToPane, openVerificationModal],
+  );
 
   const syncWallet = useCallback(
     (wallet: Awaited<ReturnType<typeof fetchWalletState>>) => {
@@ -206,8 +267,11 @@ export default function AlphaConsole({
     if (registeredUser) {
       // Session cache can lag behind live wallet; only seed if still empty
       if (typeof registeredUser.usdtBalance === 'number') {
+        const escrow =
+          typeof registeredUser.escrowBalance === 'number' ? registeredUser.escrowBalance : 0;
+        const available = Math.max(0, registeredUser.usdtBalance - escrow);
         setUsdtBalance((prev) => (prev > 0 ? prev : registeredUser.usdtBalance!));
-        setAvailableUsdt((prev) => (prev > 0 ? prev : registeredUser.usdtBalance!));
+        setAvailableUsdt((prev) => (prev > 0 ? prev : available));
       }
     }
   }, [registeredUser]);
@@ -290,43 +354,117 @@ export default function AlphaConsole({
       .finally(() => setIsWithdrawing(false));
   };
 
+  const walletCenterProps = {
+    usdtBalance,
+    availableUsdt,
+    depositAddresses,
+    walletTab,
+    setWalletTab,
+    depositNetwork,
+    setDepositNetwork,
+    depositTxHash,
+    setDepositTxHash,
+    isDepositing,
+    handleDepositExternal,
+    withdrawAmount,
+    setWithdrawAmount,
+    withdrawNetwork,
+    setWithdrawNetwork,
+    selectedWithdrawWallet,
+    setSelectedWithdrawWallet,
+    useCustomWithdrawAddress,
+    setUseCustomWithdrawAddress,
+    customWithdrawAddress,
+    setCustomWithdrawAddress,
+    isWithdrawing,
+    handleWithdrawExternal,
+    connectedWallets,
+    isAddingWallet,
+    setIsAddingWallet,
+    newWalletName,
+    setNewWalletName,
+    newWalletNetwork,
+    setNewWalletNetwork,
+    newWalletAddress,
+    setNewWalletAddress,
+    handleAddWallet,
+    walletTxLogs,
+    minWithdrawUsdt,
+    minDepositUsdt,
+    depositsEnabled,
+    treasuryUsdtAvailable,
+    tlHavale,
+    onHavaleReported: (wallet: Awaited<ReturnType<typeof fetchWalletState>>) => syncWallet(wallet),
+    ticketNumber: registeredUser?.ticketNumber,
+  } as const;
+
   return (
-    <div id="alpha-portal-root" className="min-h-screen bg-[#06060a] text-zinc-100 flex flex-col font-sans relative overflow-x-hidden">
-      <div className="absolute top-[10%] left-[10%] h-[300px] w-[300px] rounded-full bg-indigo-500/[0.02] blur-[120px] pointer-events-none" />
-      <div className="absolute top-[60%] right-[10%] h-[400px] w-[400px] rounded-full bg-purple-500/[0.03] blur-[150px] pointer-events-none" />
+    <div id="alpha-portal-root" className="relative flex min-h-screen overflow-x-hidden bg-slate-950 font-sans text-slate-100">
+      <div className="pointer-events-none absolute left-[10%] top-[10%] h-[300px] w-[300px] rounded-full bg-emerald-500/[0.03] blur-[120px]" />
+      <div className="pointer-events-none absolute right-[10%] top-[60%] h-[400px] w-[400px] rounded-full bg-teal-500/[0.04] blur-[150px]" />
+
+      <ConsoleSidebar
+        activePane={activePane}
+        userName={username}
+        ticketNumber={registeredUser?.ticketNumber}
+        availableBalance={availableUsdt}
+        emailVerified={registeredUser?.emailVerified}
+        kycVerified={registeredUser?.kycVerified}
+        mobileOpen={sidebarOpen}
+        onCloseMobile={() => setSidebarOpen(false)}
+        onNavigate={(pane) => {
+          navigateToPane(pane);
+        }}
+        onDeposit={goToDeposit}
+        onLogout={onLogout}
+        onSupport={handleSupport}
+        onHome={goToHome}
+      />
 
       <NotificationBar
         sessionToken={sessionToken ?? undefined}
         userName={username}
         userTicket={registeredUser?.ticketNumber ?? ''}
-        onHome={onBrowseLanding}
+        userEmail={registeredUser?.email ?? ''}
+        availableBalance={availableUsdt}
+        onHome={goToHome}
         onLogout={onLogout}
-        onOpenProfile={() => goToPane('dashboard')}
+        onOpenProfile={() => goToPane('bilgilerim')}
+        onOpenDashboard={() => goToPane('dashboard')}
+        consoleMobile
+        onOpenMenu={() => setSidebarOpen(true)}
+        panelOpen={notifPanelOpen}
+        onPanelOpenChange={setNotifPanelOpen}
         onOpenEslesme={(eslesmeId) => {
           setEscrowRoomId(eslesmeId);
           goToPane('sozlesmelerim');
+          setNotifPanelOpen(false);
         }}
         onApproveComplete={async (eslesmeId) => {
           await confirmEscrowComplete(eslesmeId);
           setEscrowRoomId(eslesmeId);
           goToPane('sozlesmelerim');
+          setNotifPanelOpen(false);
         }}
         onApproveCancel={async (eslesmeId) => {
           await requestEscrowRoomCancel(eslesmeId);
           setEscrowRoomId(eslesmeId);
           goToPane('sozlesmelerim');
+          setNotifPanelOpen(false);
         }}
       />
 
-      <div className="notification-bar-spacer shrink-0" aria-hidden />
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-[280px]">
+        <div className="notification-bar-spacer shrink-0 lg:hidden" aria-hidden />
 
       {flashToast && (
-        <div className="relative z-40 max-w-7xl mx-auto safe-pad-x pt-4">
+        <div className="relative z-40 mx-auto w-full max-w-7xl safe-pad-x pt-4">
           <div className="flex items-start justify-between gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
             <span className="min-w-0 break-words">{flashToast}</span>
             <button
               type="button"
               onClick={() => setFlashToast(null)}
+              aria-label="Bildirimi kapat"
               className="shrink-0 touch-target inline-flex items-center justify-center text-emerald-200/80 hover:text-white text-xs font-mono cursor-pointer"
             >
               Kapat
@@ -335,67 +473,22 @@ export default function AlphaConsole({
         </div>
       )}
 
-      <nav
-        aria-label="Mobil hızlı erişim"
-        className="lg:hidden sticky top-[calc(56px+env(safe-area-inset-top,0px))] z-40 border-b border-zinc-900/70 bg-[#06060a]/95 max-w-7xl mx-auto safe-pad-x py-2"
-      >
-        <div className="mobile-quick-nav flex gap-2 overflow-x-auto pb-0.5">
-          {MOBILE_QUICK_LINKS.map((link) => {
-            const isWalletLink = link.scrollTarget === 'wallet-center';
-            const isActive =
-              (isWalletLink && activePane === 'dashboard') ||
-              (!isWalletLink && activePane === link.pane);
-            return (
-              <button
-                key={link.label}
-                type="button"
-                onClick={() => goToPane(link.pane, link.scrollTarget)}
-                className={`shrink-0 min-h-[44px] px-3.5 py-2 rounded-xl border text-[11px] font-semibold whitespace-nowrap transition cursor-pointer ${
-                  isActive
-                    ? 'bg-amber-500/15 border-amber-500/45 text-amber-100'
-                    : 'bg-zinc-900/70 border-zinc-700/80 text-zinc-200'
-                }`}
-              >
-                <span className="mr-1" aria-hidden>
-                  {link.emoji}
-                </span>
-                {link.label}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+      <ContractVerificationModal
+        open={verificationModalOpen}
+        missing={verificationMissing}
+        onClose={() => setVerificationModalOpen(false)}
+        onGoToVerification={handleGoToVerification}
+      />
 
-      <div className="flex-1 max-w-7xl w-full mx-auto safe-pad-x py-4 sm:py-6 flex flex-col safe-pad-b min-w-0">
-        {activePane !== 'hizmet-al' && activePane !== 'sozlesmelerim' && (
-          <div className="mb-4 border-b border-zinc-900 pb-4 w-full min-w-0 space-y-4">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-              <div className="space-y-1.5 text-left">
-                <span className="text-[10px] font-mono font-semibold text-purple-400 tracking-wider">
-                  {activePane === 'dashboard' ? 'ANA SAYFAM' : pageGuide.title.toUpperCase()}
-                </span>
-                <h1 className="font-display text-2xl font-black text-white leading-tight">
-                  {activePane === 'dashboard' ? (
-                    <>
-                      Hoş Geldin,{' '}
-                      <span className="bg-gradient-to-r from-purple-300 via-indigo-200 to-indigo-300 bg-clip-text text-transparent">
-                        {username}
-                      </span>
-                    </>
-                  ) : (
-                    pageGuide.title
-                  )}
-                </h1>
-                <p className="text-xs text-zinc-400 max-w-xl">{pageGuide.subtitle}</p>
-              </div>
-              {activePane !== 'dashboard' && platformWalletPane ? (
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-zinc-500 md:text-right">
-                  <span>
-                    Bakiye:{' '}
-                    <span className="text-zinc-300 font-medium tabular-nums">{formatMoney(usdtBalance)}</span>
-                  </span>
-                </div>
-              ) : null}
+      <main id="console-main" aria-label="Kullanıcı konsolu" className="mx-auto flex w-full max-w-7xl min-w-0 flex-1 flex-col safe-pad-x py-3 sm:py-6 safe-pad-b">
+        {activePane !== 'dashboard' && (
+          <div className="mb-4 hidden w-full min-w-0 border-b border-slate-800 pb-4 lg:block">
+            <div className="space-y-1.5 text-left">
+              <span className="text-[10px] font-mono font-semibold tracking-wider text-emerald-400">
+                {pageGuide.title}
+              </span>
+              <h1 className="font-display text-2xl font-black leading-tight text-white">{pageGuide.title}</h1>
+              <p className="max-w-xl text-xs text-slate-400">{pageGuide.subtitle}</p>
             </div>
           </div>
         )}
@@ -413,7 +506,7 @@ export default function AlphaConsole({
         )}
 
         {activePane === 'dashboard' && (
-          <div id="console-dashboard" className="console-scroll-target space-y-4">
+          <div className="console-scroll-target space-y-4 sm:space-y-5">
             {isFounder && (
               <div id="founder-system-health" className="console-scroll-target space-y-4">
                 <FounderBalancePanel sessionToken={sessionToken} />
@@ -423,83 +516,62 @@ export default function AlphaConsole({
 
             {isFounder && <FounderPlatformPanel />}
 
-            {!isFounder && emailVerified && !kycApproved && (
-              <KycVerificationCard
-                fullNameDefault={registeredUser?.name}
-                emailVerified={emailVerified}
-                kycStatus={kycStatus}
-                onSuccess={(user) => onUserUpdate?.(user)}
-              />
-            )}
-
             {!isFounder && (
-              <div className="grid grid-cols-2 gap-3">
-                {NAV_CARDS.map((card) => (
-                  <button
-                    key={card.id}
-                    type="button"
-                    onClick={() => goToPane(card.id)}
-                    className={`rounded-2xl p-5 min-h-[100px] text-left border transition cursor-pointer flex flex-col justify-between ${
-                      activePane === card.id ? NAV_CARD_ACTIVE : NAV_CARD_IDLE
-                    }`}
-                  >
-                    <span className="text-2xl" aria-hidden>{card.emoji}</span>
-                    <div>
-                      <h3 className="text-base font-bold text-white">{card.label}</h3>
-                      <p className="text-[11px] text-zinc-500 mt-0.5">{card.short}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Cüzdan: web + mobil aynı bileşen (kurucu dahil) */}
-            <div id="wallet-center" className="console-scroll-target">
-              <WalletCenter
-                usdtBalance={usdtBalance}
-                availableUsdt={availableUsdt}
-                depositAddresses={depositAddresses}
-                walletTab={walletTab}
-                setWalletTab={setWalletTab}
-                depositNetwork={depositNetwork}
-                setDepositNetwork={setDepositNetwork}
-                depositTxHash={depositTxHash}
-                setDepositTxHash={setDepositTxHash}
-                isDepositing={isDepositing}
-                handleDepositExternal={handleDepositExternal}
-                withdrawAmount={withdrawAmount}
-                setWithdrawAmount={setWithdrawAmount}
-                withdrawNetwork={withdrawNetwork}
-                setWithdrawNetwork={setWithdrawNetwork}
-                selectedWithdrawWallet={selectedWithdrawWallet}
-                setSelectedWithdrawWallet={setSelectedWithdrawWallet}
-                useCustomWithdrawAddress={useCustomWithdrawAddress}
-                setUseCustomWithdrawAddress={setUseCustomWithdrawAddress}
-                customWithdrawAddress={customWithdrawAddress}
-                setCustomWithdrawAddress={setCustomWithdrawAddress}
-                isWithdrawing={isWithdrawing}
-                handleWithdrawExternal={handleWithdrawExternal}
-                connectedWallets={connectedWallets}
-                isAddingWallet={isAddingWallet}
-                setIsAddingWallet={setIsAddingWallet}
-                newWalletName={newWalletName}
-                setNewWalletName={setNewWalletName}
-                newWalletNetwork={newWalletNetwork}
-                setNewWalletNetwork={setNewWalletNetwork}
-                newWalletAddress={newWalletAddress}
-                setNewWalletAddress={setNewWalletAddress}
-                handleAddWallet={handleAddWallet}
-                walletTxLogs={walletTxLogs}
-                minWithdrawUsdt={minWithdrawUsdt}
-                minDepositUsdt={minDepositUsdt}
-                depositsEnabled={depositsEnabled}
-                treasuryUsdtAvailable={treasuryUsdtAvailable}
-                tlHavale={tlHavale}
-                onHavaleReported={(wallet) => syncWallet(wallet)}
-                ticketNumber={registeredUser?.ticketNumber}
+              <ConsoleDashboardOverview
+                userName={username}
+                availableBalance={availableUsdt}
+                onNavigate={navigateToPane}
+                onOpenRoom={openEscrowRoom}
+                onOpenNotifications={openNotifications}
               />
-            </div>
+            )}
           </div>
+        )}
+
+        {activePane === 'cuzdan' && (
+          <div id="wallet-center" className="console-scroll-target">
+            <WalletCenter {...walletCenterProps} />
+          </div>
+        )}
+
+        {activePane === 'bildirimler' && (
+          <div id="console-pane-bildirimler" className="console-scroll-target">
+            <EslesmeSinyalCenter
+              sessionToken={sessionToken}
+              onEylem={(s) => {
+                setEscrowRoomId(s.eslesme_id);
+                goToPane('sozlesmelerim');
+              }}
+            />
+          </div>
+        )}
+
+        {activePane === 'bilgilerim' && (
+          <ProfileSettingsPanel
+            user={{
+              name: registeredUser?.name,
+              email: registeredUser?.email,
+              ticketNumber: registeredUser?.ticketNumber,
+              trustScore: registeredUser?.trustScore,
+              referralCode: registeredUser?.referralCode,
+              kycStatus: registeredUser?.kycStatus,
+              emailVerified: registeredUser?.emailVerified,
+              kycVerified: registeredUser?.kycVerified,
+              role: registeredUser?.role,
+              isFounder,
+              createdAt: registeredUser?.createdAt,
+              uid: registeredUser?.uid,
+              jobHistoryPublic: registeredUser?.jobHistoryPublic,
+              googleLinked: registeredUser?.googleLinked,
+              totpEnabled: registeredUser?.totpEnabled,
+              signupRewardAmount: registeredUser?.signupRewardAmount,
+            }}
+            sessionToken={sessionToken}
+            onUserUpdate={(user) => onUserUpdate?.(user)}
+            onPasswordChanged={onLogout}
+            onGoToDashboard={() => goToPane('dashboard')}
+            onStartNewAgreement={() => navigateToPane('hizmet-al')}
+          />
         )}
 
         {activePane === 'hizmet-al' && (
@@ -510,6 +582,8 @@ export default function AlphaConsole({
               availableBalance={availableUsdt}
               activeRoomId={escrowRoomId}
               onActiveRoomIdChange={setEscrowRoomId}
+              canCreateContract={contractReady}
+              onBlockedCreateContract={openVerificationModal}
               onWalletRefresh={(wallet) => {
                 applyWalletToState(wallet, {
                   setUsdtBalance,
@@ -531,6 +605,8 @@ export default function AlphaConsole({
               availableBalance={availableUsdt}
               activeRoomId={escrowRoomId}
               onActiveRoomIdChange={setEscrowRoomId}
+              canCreateContract={contractReady}
+              onBlockedCreateContract={openVerificationModal}
               onWalletRefresh={(wallet) => {
                 applyWalletToState(wallet, {
                   setUsdtBalance,
@@ -543,13 +619,14 @@ export default function AlphaConsole({
             />
           </div>
         )}
-      </div>
+      </main>
 
-      <footer className="border-t border-zinc-900 bg-[#040407]/80 backdrop-blur-sm py-4 mt-auto">
-        <div className="max-w-7xl mx-auto safe-pad-x text-center font-mono text-[10px] text-zinc-600">
+      <footer className="mt-auto border-t border-slate-800 bg-slate-950/80 py-4 backdrop-blur-sm lg:pl-[280px]">
+        <div className="mx-auto max-w-7xl safe-pad-x text-center font-mono text-[10px] text-slate-500">
           Zinesh · 2026
         </div>
       </footer>
+      </div>
     </div>
   );
 }

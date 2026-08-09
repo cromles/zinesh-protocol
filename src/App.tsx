@@ -5,7 +5,8 @@
 
 import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
-import HomeStoryFlow from './components/HomeStoryFlow';
+import LandingPage from './components/landing/LandingPage';
+import ZineshFrame from './components/ZineshFrame';
 import ErrorBoundary from './components/ErrorBoundary';
 import BackToTop from './components/BackToTop';
 import type { UserProfile } from './lib/userProfile';
@@ -28,18 +29,20 @@ const Footer = lazy(() => import('./components/Footer'));
 
 function ConsoleLoadingScreen() {
   return (
-    <div className="min-h-screen bg-[#030307] flex flex-col items-center justify-center text-zinc-100 font-mono">
-      <div className="relative flex h-16 w-16 items-center justify-center mb-4">
-        <span className="absolute animate-ping h-full w-full rounded-full bg-purple-500/20 opacity-75" />
-        <div className="h-10 w-10 border-2 border-t-purple-500 border-r-transparent border-l-transparent border-b-purple-500 rounded-full animate-spin" />
-      </div>
-      <div className="text-zinc-400 text-xs tracking-widest uppercase">Konsol yükleniyor...</div>
+    <div className="min-h-screen bg-[#0a0908] flex flex-col items-center justify-center px-6">
+      <ZineshFrame accent className="identity-loading-panel">
+        <div className="trust-vault-core mx-auto">
+          <span className="trust-vault-lock" />
+        </div>
+        <p className="mt-4 text-sm font-medium text-white/80">Konsol açılıyor</p>
+      </ZineshFrame>
     </div>
   );
 }
 
 export default function App() {
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
+  const [leadModalTab, setLeadModalTab] = useState<'login' | 'register'>('register');
   const [viewMode, setViewMode] = useState<'landing' | 'alpha'>('landing');
   const [registeredUser, setRegisteredUser] = useState<UserProfile | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
@@ -358,6 +361,24 @@ export default function App() {
     setIsLeadModalOpen(true);
   };
 
+  const handleOpenLoginModal = () => {
+    if (isLoggedIn) {
+      handleGoToConsole();
+      return;
+    }
+    setLeadModalTab('login');
+    setIsLeadModalOpen(true);
+  };
+
+  const handleOpenRegisterModal = () => {
+    if (isLoggedIn) {
+      handleGoToConsole();
+      return;
+    }
+    setLeadModalTab('register');
+    setIsLeadModalOpen(true);
+  };
+
   const handleCloseLeadModal = () => {
     setIsLeadModalOpen(false);
   };
@@ -384,7 +405,12 @@ export default function App() {
 
   const handleBrowseLanding = () => {
     setViewMode('landing');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
   };
 
   const handleLogout = () => {
@@ -396,12 +422,13 @@ export default function App() {
 
   if (loadingSession) {
     return (
-      <div className="min-h-screen bg-[#030307] flex flex-col items-center justify-center text-zinc-100 font-mono">
-        <div className="relative flex h-16 w-16 items-center justify-center mb-4">
-          <span className="absolute animate-ping h-full w-full rounded-full bg-purple-500/20 opacity-75" />
-          <div className="h-10 w-10 border-2 border-t-purple-500 border-r-transparent border-l-transparent border-b-purple-500 rounded-full animate-spin" />
-        </div>
-        <div className="text-zinc-400 text-xs tracking-widest uppercase">Zinesh Güven Katmanı Yükleniyor...</div>
+      <div className="min-h-screen bg-[#0a0908] flex flex-col items-center justify-center px-6">
+        <ZineshFrame accent className="identity-loading-panel">
+          <div className="trust-vault-core mx-auto">
+            <span className="trust-vault-lock" />
+          </div>
+          <p className="mt-4 text-sm font-medium text-white/80">Güven katmanı hazırlanıyor</p>
+        </ZineshFrame>
       </div>
     );
   }
@@ -452,18 +479,27 @@ export default function App() {
   }
 
   return (
-    <div id="zinesh-app-root" className="min-h-screen w-full max-w-full overflow-x-clip bg-[#040408] text-zinc-100 flex flex-col justify-between selection:bg-purple-500/30 selection:text-white">
+    <div id="zinesh-app-root" className="min-h-screen w-full max-w-full overflow-x-clip bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-emerald-500/30 selection:text-white">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-black"
+      >
+        Ana içeriğe atla
+      </a>
       <Header
         isLoggedIn={isLoggedIn}
         username={registeredUser?.name}
+        ticketNumber={registeredUser?.ticketNumber ?? getSession()?.ticketNumber}
+        onLoginClick={handleOpenLoginModal}
+        onRegisterClick={handleOpenRegisterModal}
         onJoinClick={handleOpenLeadModal}
         onGoToConsole={handleGoToConsole}
         onLogout={handleLogout}
       />
 
-      <main className="flex-1 w-full max-w-full overflow-x-clip overflow-y-visible">
-        <ErrorBoundary variant="section" label="home-story">
-          <HomeStoryFlow
+      <main id="main-content" className="flex-1 w-full max-w-full overflow-x-clip overflow-y-visible">
+        <ErrorBoundary variant="section" label="landing">
+          <LandingPage
             isLoggedIn={isLoggedIn}
             onJoinClick={handleOpenLeadModal}
             onGoToConsole={handleGoToConsole}
@@ -481,6 +517,7 @@ export default function App() {
             isOpen={isLeadModalOpen}
             onClose={handleCloseLeadModal}
             onEnterAlpha={handleEnterAlpha}
+            preferredAuthTab={leadModalTab}
             initialReferralCode={pendingReferralCode}
             referralInvite={referralInvitePending && !!pendingReferralCode}
             oauthState={oauthCallbackState}

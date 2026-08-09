@@ -17,9 +17,16 @@ export interface UserProfile {
   campaign?: unknown;
   emailVerified?: boolean;
   emailVerificationPending?: boolean;
+  phoneVerified?: boolean;
+  phoneMasked?: string;
+  kycVerified?: boolean;
+  contractVerificationReady?: boolean;
   signupRewardPending?: boolean;
   signupRewardAmount?: number;
   kycStatus?: 'none' | 'pending' | 'approved' | 'rejected';
   isFounder?: boolean;
   jobHistoryPublic?: boolean;
+  googleLinked?: boolean;
+  totpEnabled?: boolean;
+  createdAt?: string;
 }

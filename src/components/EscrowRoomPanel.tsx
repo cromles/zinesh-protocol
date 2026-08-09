@@ -13,30 +13,70 @@ import {
   acceptEscrowTerms,
   confirmEscrowComplete,
   connectEscrowRoom,
+  counterEscrowOffer,
   escrowRoomNextAction,
   escrowRoomStatusLabel,
   fetchEscrowRoomDetail,
   fetchEscrowRooms,
+  fetchEscrowRoomTimeline,
   fileEscrowDispute,
   proposeEscrowTerms,
+  rejectEscrowTerms,
+  requestEscrowChanges,
   requestEscrowRoomCancel,
   sendEscrowRoomMessage,
   type EscrowRoom,
   type EscrowRoomMessage,
   type EscrowRoomRole,
+  type EscrowTimelineEntry,
 } from '../lib/escrowRoomApi';
 import { fetchWalletState } from '../lib/walletApi';
-import { getSessionToken } from '../lib/auth';
+import {
+  CONSOLE_POLL_LIST_MS,
+  CONSOLE_POLL_ROOM_DETAIL_MS,
+} from '../lib/consolePoll';
+import { getSessionToken, getSession } from '../lib/auth';
+import { ContractVerificationError } from '../lib/contractVerification';
 import { CONTRACT_MIN_CHARS, ESCROW_PARTY } from '../lib/plainLanguage';
 import EslesmeSinyalCenter from './EslesmeSinyalCenter';
+import EscrowRoomDebugPanel from './EscrowRoomDebugPanel';
+import RiskIntelligencePanel from './RiskIntelligencePanel';
+import TrustTimeline from './TrustTimeline';
+import CopilotPanel from './CopilotPanel';
+import {
+  fetchRoomRiskEngine,
+  riskEngineErrorKind,
+  type RiskEngineErrorKind,
+  type RiskObservation,
+} from '../lib/riskEngineApi';
+import { isDemoUiEnabled } from '../lib/demoMode';
 import { displayMemberTicket } from '../lib/memberTicket';
 import { isInsufficientBalanceMessage } from '../lib/insufficientBalance';
 import type { EslesmeSinyal } from '../lib/eslesmeSinyalApi';
+import EscrowDealSummary from './escrow/EscrowDealSummary';
+import {
+  CONSOLE_CARD,
+  CONSOLE_INPUT,
+  CONSOLE_SURFACE,
+} from '../lib/consoleSkin';
 
-const INPUT =
-  'w-full min-h-[48px] bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-base text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-500/40';
+const INPUT = `${CONSOLE_INPUT} min-h-[48px] text-base rounded-2xl`;
 
-const ROOM_POLL_MS = 12_000;
+const ROOM_LIST_POLL_MS = CONSOLE_POLL_LIST_MS;
+const ROOM_DETAIL_POLL_MS = CONSOLE_POLL_ROOM_DETAIL_MS;
+
+function formatEscrowTimestamp(iso?: string): string | null {
+  if (!iso?.trim()) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString('tr-TR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 function roomPollKey(room: EscrowRoom): string {
   return [
@@ -50,6 +90,8 @@ function roomPollKey(room: EscrowRoom): string {
     room.workerRequestsCollateral,
     room.employerCancelRequested,
     room.workerCancelRequested,
+    room.termsProposedBy ?? 'employer',
+    room.termsChangeRequested,
   ].join('|');
 }
 
@@ -57,6 +99,87 @@ function messagesPollKey(msgs: EscrowRoomMessage[]): string {
   if (msgs.length === 0) return '';
   const last = msgs[msgs.length - 1];
   return `${msgs.length}:${last.id}:${last.createdAt}`;
+}
+
+function formatTimelineDate(iso?: string): string | null {
+  if (!iso?.trim()) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString('tr-TR', {
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/** Görüntüleme amaçlı — event_type kullanıcıya gösterilmez */
+function timelineEntryIcon(event: string): string {
+  const map: Record<string, string> = {
+    contract_created: '📝',
+    terms_proposed: '📝',
+    terms_updated: '📋',
+    terms_rejected: '↩️',
+    changes_requested: '✏️',
+    counter_offer_created: '📋',
+    terms_accepted: '🤝',
+    contract_finalized: '🤝',
+    escrow_funded: '💰',
+    escrow_locked: '🔒',
+    escrow_release_requested: '🔓',
+    settlement_started: '⏳',
+    settlement_completed: '✅',
+    settlement_failed: '⚠️',
+    escrow_recovered: '🔄',
+    dispute_opened: '⚖️',
+    dispute_deposit_paid: '💳',
+    dispute_resolved: '⚖️',
+    dispute_deposit_refunded: '↩️',
+    dispute_deposit_forfeited: '⚖️',
+  };
+  return map[event] ?? '•';
+}
+
+function EscrowRoomTimelineView({
+  entries,
+  loading,
+}: {
+  entries: EscrowTimelineEntry[];
+  loading: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-[#09090e] p-5">
+      <p className="text-sm font-semibold text-white mb-3">İşlem Geçmişi</p>
+      {loading && entries.length === 0 ? (
+        <p className="text-xs text-zinc-600">Yükleniyor…</p>
+      ) : entries.length === 0 ? (
+        <p className="text-xs text-zinc-600 leading-relaxed">
+          Henüz kayıtlı işlem geçmişi yok. Yeni işlemler burada görünecek.
+        </p>
+      ) : (
+        <ol className="space-y-0">
+          {entries.map((entry, index) => {
+            const when = formatTimelineDate(entry.date);
+            const isLast = index === entries.length - 1;
+            return (
+              <li key={entry.id || `${entry.date}-${index}`} className="flex gap-3">
+                <div className="flex flex-col items-center shrink-0 pt-0.5">
+                  <span className="text-base leading-none" aria-hidden>
+                    {timelineEntryIcon(entry.event)}
+                  </span>
+                  {!isLast && <span className="w-px flex-1 min-h-[1.25rem] bg-zinc-800 mt-2" />}
+                </div>
+                <div className={`min-w-0 flex-1 ${isLast ? 'pb-0' : 'pb-4'}`}>
+                  <p className="text-sm text-zinc-200 leading-snug">{entry.description}</p>
+                  {when && <p className="text-[11px] text-zinc-500 mt-1">{when}</p>}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </div>
+  );
 }
 
 export interface EscrowRoomPanelProps {
@@ -69,6 +192,10 @@ export interface EscrowRoomPanelProps {
   onWalletRefresh?: (wallet: import('../lib/walletApi').WalletState) => void;
   /** Kasa → yatır sekmesine git (yetersiz bakiye) */
   onGoToDeposit?: () => void;
+  /** Yeni sözleşme için 3 kademeli doğrulama tamam mı */
+  canCreateContract?: boolean;
+  /** Doğrulama eksikse modal aç */
+  onBlockedCreateContract?: () => void;
 }
 
 function PanelError({
@@ -106,6 +233,8 @@ export default function EscrowRoomPanel({
   onActiveRoomIdChange,
   onWalletRefresh,
   onGoToDeposit,
+  canCreateContract = true,
+  onBlockedCreateContract,
 }: EscrowRoomPanelProps) {
   const [rooms, setRooms] = useState<EscrowRoom[]>([]);
   const [internalRoomId, setInternalRoomId] = useState<string | null>(null);
@@ -145,6 +274,55 @@ export default function EscrowRoomPanel({
   const [disputeLoading, setDisputeLoading] = useState(false);
   const [showDispute, setShowDispute] = useState(false);
 
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectLoading, setRejectLoading] = useState(false);
+  const [showReject, setShowReject] = useState(false);
+  const [changeNote, setChangeNote] = useState('');
+  const [changesLoading, setChangesLoading] = useState(false);
+  const [showRequestChanges, setShowRequestChanges] = useState(false);
+  const [showCounterOffer, setShowCounterOffer] = useState(false);
+  const [counterLoading, setCounterLoading] = useState(false);
+
+  const [timeline, setTimeline] = useState<EscrowTimelineEntry[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [riskObservations, setRiskObservations] = useState<RiskObservation[]>([]);
+  const [riskEngineLoading, setRiskEngineLoading] = useState(false);
+  const [riskEngineErrorKind, setRiskEngineErrorKind] = useState<RiskEngineErrorKind | null>(null);
+  const activeRoomIdRef = useRef<string | null>(null);
+
+  const loadRiskEngine = useCallback(async (roomId: string) => {
+    const actorId = getSession()?.uid;
+    activeRoomIdRef.current = roomId;
+    setRiskEngineLoading(true);
+    setRiskEngineErrorKind(null);
+    try {
+      const pkg = await fetchRoomRiskEngine(roomId, actorId);
+      if (activeRoomIdRef.current !== roomId) return;
+      setRiskObservations(pkg.observationRows);
+      setRiskEngineErrorKind(null);
+    } catch (err) {
+      if (activeRoomIdRef.current !== roomId) return;
+      setRiskObservations([]);
+      setRiskEngineErrorKind(riskEngineErrorKind(err));
+    } finally {
+      if (activeRoomIdRef.current === roomId) {
+        setRiskEngineLoading(false);
+      }
+    }
+  }, []);
+
+  const loadTimeline = useCallback(async (roomId: string) => {
+    setTimelineLoading(true);
+    try {
+      const { timeline: entries } = await fetchEscrowRoomTimeline(roomId);
+      setTimeline(entries);
+    } catch {
+      setTimeline([]);
+    } finally {
+      setTimelineLoading(false);
+    }
+  }, []);
+
   const loadRooms = useCallback(async () => {
     try {
       const list = await fetchEscrowRooms();
@@ -161,6 +339,8 @@ export default function EscrowRoomPanel({
 
   const refreshRoomDetail = useCallback(async (roomId: string, silent = false) => {
     if (!silent) setLoading(true);
+    void loadTimeline(roomId);
+    void loadRiskEngine(roomId);
     try {
       const { room, messages: msgs } = await fetchEscrowRoomDetail(roomId);
       const nextRoomKey = roomPollKey(room);
@@ -181,7 +361,7 @@ export default function EscrowRoomPanel({
     } finally {
       if (!silent) setLoading(false);
     }
-  }, []);
+  }, [loadTimeline, loadRiskEngine]);
 
   const openRoom = useCallback(
     async (roomId: string) => {
@@ -191,6 +371,8 @@ export default function EscrowRoomPanel({
       setShowMessages(false);
       roomPollKeyRef.current = '';
       messagesPollKeyRef.current = '';
+      void loadTimeline(roomId);
+      void loadRiskEngine(roomId);
       try {
         const { room, messages: msgs } = await fetchEscrowRoomDetail(roomId);
         roomPollKeyRef.current = roomPollKey(room);
@@ -206,13 +388,19 @@ export default function EscrowRoomPanel({
         setLoading(false);
       }
     },
-    [setActiveRoomId],
+    [setActiveRoomId, loadTimeline, loadRiskEngine],
   );
 
   const closeRoom = () => {
+    activeRoomIdRef.current = null;
     setActiveRoomId(null);
     setActiveRoom(null);
     setMessages([]);
+    setTimeline([]);
+    setTimelineLoading(false);
+    setRiskObservations([]);
+    setRiskEngineLoading(false);
+    setRiskEngineErrorKind(null);
     setError('');
     setShowDispute(false);
   };
@@ -223,7 +411,7 @@ export default function EscrowRoomPanel({
       if (document.visibilityState === 'hidden') return;
       loadRooms();
     };
-    const t = window.setInterval(tick, ROOM_POLL_MS);
+    const t = window.setInterval(tick, ROOM_LIST_POLL_MS);
     return () => window.clearInterval(t);
   }, [loadRooms]);
 
@@ -231,17 +419,22 @@ export default function EscrowRoomPanel({
     if (!activeRoomId) {
       setActiveRoom(null);
       setMessages([]);
+      setTimeline([]);
+      setTimelineLoading(false);
       roomPollKeyRef.current = '';
       messagesPollKeyRef.current = '';
       return;
     }
-    void refreshRoomDetail(activeRoomId, true);
-    const tick = () => {
+    const detailPoll = () => {
       if (document.visibilityState === 'hidden') return;
       void refreshRoomDetail(activeRoomId, true);
     };
-    const t = window.setInterval(tick, ROOM_POLL_MS);
-    return () => window.clearInterval(t);
+    const initialDelay = window.setTimeout(detailPoll, Math.floor(ROOM_DETAIL_POLL_MS / 2));
+    const t = window.setInterval(detailPoll, ROOM_DETAIL_POLL_MS);
+    return () => {
+      window.clearTimeout(initialDelay);
+      window.clearInterval(t);
+    };
   }, [activeRoomId, refreshRoomDetail]);
 
   useEffect(() => {
@@ -250,8 +443,20 @@ export default function EscrowRoomPanel({
     messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'nearest' });
   }, [messages, showMessages]);
 
+  const tryOpenNewConnect = () => {
+    if (!canCreateContract) {
+      onBlockedCreateContract?.();
+      return;
+    }
+    setShowNewConnect(true);
+  };
+
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canCreateContract) {
+      onBlockedCreateContract?.();
+      return;
+    }
     setConnectLoading(true);
     setError('');
     try {
@@ -261,6 +466,10 @@ export default function EscrowRoomPanel({
       setPeerTicket('');
       await openRoom(room.id);
     } catch (err) {
+      if (err instanceof ContractVerificationError) {
+        onBlockedCreateContract?.();
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Bağlantı kurulamadı.');
     } finally {
       setConnectLoading(false);
@@ -270,7 +479,10 @@ export default function EscrowRoomPanel({
   const handlePropose = async (e: React.FormEvent) => {
     e.preventDefault();
     const contract = offerContract.trim();
-    if (!activeRoomId || offerAmount === '' || offerAmount < 1 || !offerTitle.trim()) return;
+    if (!activeRoomId || offerAmount === '' || offerAmount < 1 || !offerTitle.trim()) {
+      setError('Başlık ve geçerli bir tutar girin.');
+      return;
+    }
     if (contract.length < CONTRACT_MIN_CHARS) {
       setError(
         `Sözleşme metni en az ${CONTRACT_MIN_CHARS} karakter olmalı. Ne isteniyor ve ne teslim edilecek net yazın.`,
@@ -298,6 +510,10 @@ export default function EscrowRoomPanel({
       await refreshRoomDetail(activeRoomId, true);
       await loadRooms();
     } catch (err) {
+      if (err instanceof ContractVerificationError) {
+        onBlockedCreateContract?.();
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Teklif gönderilemedi.');
     } finally {
       setOfferLoading(false);
@@ -325,6 +541,10 @@ export default function EscrowRoomPanel({
       await refreshRoomDetail(activeRoomId, true);
       await loadRooms();
     } catch (err) {
+      if (err instanceof ContractVerificationError) {
+        onBlockedCreateContract?.();
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Onaylanamadı.');
     } finally {
       setAcceptLoading(false);
@@ -396,11 +616,84 @@ export default function EscrowRoomPanel({
     }
   };
 
+  const handleReject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeRoomId) return;
+    setRejectLoading(true);
+    setError('');
+    try {
+      const room = await rejectEscrowTerms(activeRoomId, rejectReason.trim());
+      setActiveRoom(room);
+      setShowReject(false);
+      setRejectReason('');
+      await refreshRoomDetail(activeRoomId, true);
+      await loadRooms();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Teklif reddedilemedi.');
+    } finally {
+      setRejectLoading(false);
+    }
+  };
+
+  const handleRequestChanges = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeRoomId || changeNote.trim().length < 10) return;
+    setChangesLoading(true);
+    setError('');
+    try {
+      const room = await requestEscrowChanges(activeRoomId, changeNote.trim());
+      setActiveRoom(room);
+      setShowRequestChanges(false);
+      setChangeNote('');
+      await refreshRoomDetail(activeRoomId, true);
+      await loadRooms();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Talep iletilemedi.');
+    } finally {
+      setChangesLoading(false);
+    }
+  };
+
+  const handleCounterOffer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const contract = offerContract.trim();
+    if (!activeRoomId || offerAmount === '' || offerAmount < 1 || !offerTitle.trim()) return;
+    if (contract.length < CONTRACT_MIN_CHARS) {
+      setError(`Sözleşme metni en az ${CONTRACT_MIN_CHARS} karakter olmalı.`);
+      return;
+    }
+    setCounterLoading(true);
+    setError('');
+    try {
+      const room = await counterEscrowOffer(
+        activeRoomId,
+        offerAmount,
+        offerTitle.trim(),
+        contract,
+        false,
+      );
+      setActiveRoom(room);
+      setShowCounterOffer(false);
+      await refreshRoomDetail(activeRoomId, true);
+      await loadRooms();
+    } catch (err) {
+      if (err instanceof ContractVerificationError) {
+        onBlockedCreateContract?.();
+        return;
+      }
+      setError(err instanceof Error ? err.message : 'Karşı teklif gönderilemedi.');
+    } finally {
+      setCounterLoading(false);
+    }
+  };
+
   const renderConnectForm = () => (
-    <form onSubmit={handleConnect} className="rounded-2xl border border-zinc-800 bg-[#09090e] p-5 space-y-4">
+    <form onSubmit={handleConnect} className={`${CONSOLE_SURFACE} p-5 space-y-4`}>
       <div>
-        <p className="text-sm font-semibold text-white">Karşı tarafın üye numarası</p>
-        <p className="text-xs text-zinc-500 mt-0.5">Karşı tarafın üye numarasını girin (ör. 22595)</p>
+        <p className="text-sm font-semibold text-white">Karşı tarafın ZN-ID numarası</p>
+        <p className="text-xs text-slate-500 mt-0.5">
+          Dışarıda anlaştığınız kişinin üye numarasını girin. Eşleştirme veya öneri yoktur.
+        </p>
       </div>
       <input
         type="text"
@@ -418,7 +711,7 @@ export default function EscrowRoomPanel({
           className={`min-h-[48px] rounded-xl text-sm font-semibold border cursor-pointer ${
             connectRole === 'employer'
               ? 'bg-emerald-600 border-emerald-500 text-white'
-              : 'border-zinc-700 text-zinc-400'
+              : 'border-slate-700 text-slate-400'
           }`}
         >
           {ESCROW_PARTY.employerBtn}
@@ -429,7 +722,7 @@ export default function EscrowRoomPanel({
           className={`min-h-[48px] rounded-xl text-sm font-semibold border cursor-pointer ${
             connectRole === 'worker'
               ? 'bg-sky-600 border-sky-500 text-white'
-              : 'border-zinc-700 text-zinc-400'
+              : 'border-slate-700 text-slate-400'
           }`}
         >
           {ESCROW_PARTY.workerBtn}
@@ -442,8 +735,8 @@ export default function EscrowRoomPanel({
       >
         {connectLoading ? 'Bağlanıyor…' : 'Bağlan'}
       </button>
-      <p className="text-[11px] text-zinc-500 text-center">
-        Numaranız: <span className="font-mono text-zinc-300">{displayMemberTicket(myTicketNumber)}</span>
+      <p className="text-[11px] text-slate-500 text-center">
+        Numaranız: <span className="font-mono text-emerald-400">ZN-{displayMemberTicket(myTicketNumber)}</span>
       </p>
     </form>
   );
@@ -451,9 +744,9 @@ export default function EscrowRoomPanel({
   const renderRoomList = () => (
     <div className="space-y-3">
       {rooms.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-zinc-800 p-8 text-center">
-          <p className="text-sm text-zinc-400">Henüz emanet yok.</p>
-          <p className="text-xs text-zinc-600 mt-1">Karşı tarafın numarasıyla yeni iş başlatın.</p>
+        <div className="rounded-2xl border border-dashed border-slate-800 p-8 text-center">
+          <p className="text-sm text-slate-400">Henüz anlaşma yok.</p>
+          <p className="text-xs text-slate-600 mt-1">Karşı tarafın ZN-ID numarasıyla yeni iş başlatın.</p>
         </div>
       ) : (
         rooms.map((room) => {
@@ -466,7 +759,7 @@ export default function EscrowRoomPanel({
               className={`w-full text-left rounded-2xl border p-4 transition cursor-pointer ${
                 action?.urgent
                   ? 'border-emerald-500/30 bg-emerald-500/[0.06] hover:border-emerald-500/50'
-                  : 'border-zinc-800 bg-[#09090e] hover:border-zinc-700'
+                  : 'border-slate-800 bg-slate-950/70 hover:border-slate-700'
               }`}
             >
               <div className="flex justify-between gap-3 items-start">
@@ -495,7 +788,7 @@ export default function EscrowRoomPanel({
 
   if (activeRoomId && !activeRoom) {
     return (
-      <div className="max-w-lg mx-auto space-y-4 escrow-stable-scroll">
+      <div className="mx-auto w-full min-w-0 max-w-lg space-y-4 escrow-stable-scroll">
         <button
           type="button"
           onClick={closeRoom}
@@ -512,29 +805,57 @@ export default function EscrowRoomPanel({
     const role = activeRoom.myRole;
     const isEmployer = role === 'employer';
     const isWorker = role === 'worker';
-    const canPropose = isEmployer && ['negotiating', 'terms_pending'].includes(activeRoom.status);
-    const canAccept = isWorker && activeRoom.status === 'terms_pending' && activeRoom.agreedAmountTry > 0;
+    const canPropose = isEmployer && ['negotiating', 'terms_pending'].includes(activeRoom.status)
+      && activeRoom.termsProposedBy !== 'worker';
+    const canAcceptEmployerOffer = isWorker && activeRoom.status === 'terms_pending'
+      && activeRoom.agreedAmountTry > 0 && activeRoom.termsProposedBy !== 'worker';
+    const canAcceptWorkerCounter = isEmployer && activeRoom.status === 'terms_pending'
+      && activeRoom.agreedAmountTry > 0 && activeRoom.termsProposedBy === 'worker';
+    const canAccept = canAcceptEmployerOffer || canAcceptWorkerCounter;
+    const workerDebugAction =
+      activeRoom.status === 'locked' || activeRoom.status === 'completion_pending'
+        ? 'accepted'
+        : activeRoom.status === 'terms_pending' && isEmployer
+          ? 'awaiting accept'
+          : activeRoom.status === 'terms_pending' && isWorker
+            ? 'reviewing'
+            : activeRoom.status === 'locking'
+              ? 'locking'
+              : undefined;
+    const canNegotiateTerms = isWorker && activeRoom.status === 'terms_pending'
+      && activeRoom.agreedAmountTry > 0 && activeRoom.termsProposedBy !== 'worker';
+    const lockedPrincipal = activeRoom.employerLockedTry > 0
+      ? activeRoom.employerLockedTry
+      : activeRoom.agreedAmountTry;
+    const disputeDepositPreview = lockedPrincipal > 0
+      ? Math.round(lockedPrincipal * 0.01 * 100) / 100
+      : 0;
+    const disputeDepositTry = activeRoom.disputeDepositTry ?? disputeDepositPreview;
     const canConfirm = ['locked', 'completion_pending'].includes(activeRoom.status);
     const alreadyConfirmed =
       (isEmployer && activeRoom.employerConfirmedComplete) ||
       (isWorker && activeRoom.workerConfirmedComplete);
     const isDone = ['completed', 'cancelled', 'resolved'].includes(activeRoom.status);
+    const termsProposedLabel = formatEscrowTimestamp(activeRoom.termsProposedAt);
+    const lockedLabel = formatEscrowTimestamp(activeRoom.lockedAt);
+    const createdLabel = formatEscrowTimestamp(activeRoom.createdAt);
+    const myName = getSession()?.name ?? '';
 
     return (
-      <div className="max-w-lg mx-auto space-y-4 escrow-stable-scroll">
+      <div className="mx-auto w-full min-w-0 max-w-lg space-y-4 escrow-stable-scroll">
         <button
           type="button"
           onClick={closeRoom}
-          className="text-sm text-zinc-400 hover:text-white flex items-center gap-1.5 cursor-pointer py-1"
+          className="text-sm text-slate-400 hover:text-white flex items-center gap-1.5 cursor-pointer py-1"
         >
           <ArrowLeft className="h-4 w-4" /> Listeye dön
         </button>
 
-        <div className="rounded-2xl border border-zinc-800 bg-[#09090e] p-5 space-y-2">
+        <div className={`${CONSOLE_SURFACE} p-5 space-y-2`}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-lg font-bold text-white">{activeRoom.title || 'İş görüşmesi'}</p>
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-slate-400">
                 {escrowRoomStatusLabel(activeRoom.status, role)}
                 {activeRoom.agreedAmountTry > 0 && (
                   <span className="text-white font-semibold"> · {formatMoney(activeRoom.agreedAmountTry)}</span>
@@ -549,33 +870,91 @@ export default function EscrowRoomPanel({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-purple-500/25 bg-purple-500/[0.06] p-5 space-y-2">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-purple-300/90 font-bold">
+        <EscrowDealSummary
+          room={activeRoom}
+          myName={myName}
+          availableBalance={availableBalance}
+        />
+
+        {isDemoUiEnabled() ? (
+          <EscrowRoomDebugPanel
+            room={activeRoom}
+            availableBalance={availableBalance}
+            workerAction={workerDebugAction}
+          />
+        ) : null}
+
+        <div className="rounded-2xl border border-emerald-500/25 bg-emerald-950/20 p-5 space-y-2">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-emerald-400 font-bold">
             Yazılı sözleşme
           </p>
           {(activeRoom.description || '').trim() ? (
             <>
-              <p className="text-sm text-zinc-200 whitespace-pre-wrap leading-relaxed">
+              <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
                 {activeRoom.description}
               </p>
-              {canAccept && (
-                <p className="text-xs text-zinc-500 pt-1">
-                  Onayladığınızda bu metin ve tutar kilitlenir. Beğenmiyorsanız mesajlaşarak düzeltme isteyin.
+              {(termsProposedLabel || lockedLabel || createdLabel) && (
+                <div className="pt-2 space-y-1 text-[11px] text-slate-500 font-mono">
+                  {createdLabel && <p>Eşleşme: {createdLabel}</p>}
+                  {termsProposedLabel && <p>Sözleşme teklifi: {termsProposedLabel}</p>}
+                  {lockedLabel && <p>Kilitlenme (onay): {lockedLabel}</p>}
+                </div>
+              )}
+              {canAcceptEmployerOffer && (
+                <p className="text-xs text-slate-500 pt-1">
+                  Onayladığınızda bu metin ve tutar kilitlenir. Beğenmiyorsanız reddedebilir, değişiklik isteyebilir veya karşı teklif verebilirsiniz.
+                </p>
+              )}
+              {canAcceptWorkerCounter && (
+                <p className="text-xs text-slate-500 pt-1">
+                  İş alanın karşı teklifini onayladığınızda tutar hesabınızdan kilitlenir.
                 </p>
               )}
               {canConfirm && (
-                <p className="text-xs text-zinc-500 pt-1">
+                <p className="text-xs text-slate-500 pt-1">
                   Tamamlama ve itiraz bu yazılı sözleşmeye göre değerlendirilir.
                 </p>
               )}
             </>
           ) : (
-            <p className="text-sm text-zinc-500 leading-relaxed">
+            <p className="text-sm text-slate-500 leading-relaxed">
               Henüz sözleşme yok. Önce talepleri konuşun, sonra yazılı metni yazıp teklif gönderin. Boş
               sözleşme ile iş başlamaz.
             </p>
           )}
         </div>
+
+        <RiskIntelligencePanel
+          observations={riskObservations}
+          loading={riskEngineLoading}
+          errorKind={riskEngineErrorKind}
+          onRetry={() => {
+            if (activeRoom?.id) void loadRiskEngine(activeRoom.id);
+          }}
+        />
+
+        <TrustTimeline
+          observations={riskObservations}
+          loading={riskEngineLoading}
+          errorKind={riskEngineErrorKind}
+          onRetry={() => {
+            if (activeRoom?.id) void loadRiskEngine(activeRoom.id);
+          }}
+        />
+
+        {activeRoom?.id ? (
+          <CopilotPanel
+            roomId={activeRoom.id}
+            observations={riskObservations}
+            loading={riskEngineLoading}
+            errorKind={riskEngineErrorKind}
+            onRetry={() => {
+              if (activeRoom?.id) void loadRiskEngine(activeRoom.id);
+            }}
+          />
+        ) : null}
+
+        <EscrowRoomTimelineView entries={timeline} loading={timelineLoading} />
 
         {error && <PanelError message={error} onGoToDeposit={onGoToDeposit} />}
 
@@ -588,13 +967,136 @@ export default function EscrowRoomPanel({
               className="w-full min-h-[56px] rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-lg disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
             >
               <Lock className="h-5 w-5" />
-              {acceptLoading ? 'Onaylanıyor…' : 'Sözleşmeyi ve tutarı onayla'}
+              {acceptLoading
+                ? 'Onaylanıyor…'
+                : canAcceptWorkerCounter
+                  ? 'Karşı teklifi onayla'
+                  : 'Sözleşmeyi ve tutarı onayla'}
             </button>
           </div>
         )}
 
+        {canNegotiateTerms && !showReject && !showRequestChanges && !showCounterOffer && (
+          <div className={`${CONSOLE_CARD} p-4 space-y-2`}>
+            <p className="text-sm font-semibold text-white">Teklife yanıt ver</p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <button
+                type="button"
+                onClick={() => setShowRequestChanges(true)}
+                className="min-h-[44px] w-full rounded-xl border border-slate-700 py-2.5 text-sm text-slate-200 hover:border-slate-500 cursor-pointer sm:min-w-[120px] sm:flex-1"
+              >
+                Değişiklik iste
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCounterOffer(true)}
+                className="min-h-[44px] w-full rounded-xl border border-emerald-500/40 py-2.5 text-sm text-emerald-200 hover:border-emerald-400/60 cursor-pointer sm:min-w-[120px] sm:flex-1"
+              >
+                Karşı teklif
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowReject(true)}
+                className="min-h-[44px] w-full rounded-xl border border-red-500/30 py-2.5 text-sm text-red-300 hover:border-red-400/50 cursor-pointer sm:min-w-[120px] sm:flex-1"
+              >
+                Reddet
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showReject && (
+          <form onSubmit={handleReject} className="rounded-2xl border border-red-500/20 p-4 space-y-3">
+            <p className="text-sm font-semibold text-white">Teklifi reddet</p>
+            <textarea
+              rows={2}
+              placeholder="İsteğe bağlı gerekçe"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className={`${INPUT} resize-none text-sm`}
+            />
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setShowReject(false)} className="flex-1 py-2 text-sm text-zinc-500 cursor-pointer">
+                Vazgeç
+              </button>
+              <button type="submit" disabled={rejectLoading} className="flex-1 py-2 text-sm font-semibold text-red-300 cursor-pointer">
+                {rejectLoading ? '…' : 'Reddet'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {showRequestChanges && (
+          <form onSubmit={handleRequestChanges} className="rounded-2xl border border-zinc-700 p-4 space-y-3">
+            <p className="text-sm font-semibold text-white">Değişiklik talebi</p>
+            <textarea
+              required
+              rows={3}
+              minLength={10}
+              placeholder="Ne değişmeli? (en az 10 karakter)"
+              value={changeNote}
+              onChange={(e) => setChangeNote(e.target.value)}
+              className={`${INPUT} resize-none text-sm`}
+            />
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setShowRequestChanges(false)} className="flex-1 py-2 text-sm text-zinc-500 cursor-pointer">
+                Vazgeç
+              </button>
+              <button type="submit" disabled={changesLoading || changeNote.trim().length < 10} className="flex-1 py-2 text-sm font-semibold text-white cursor-pointer">
+                {changesLoading ? '…' : 'Gönder'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {showCounterOffer && (
+          <form onSubmit={handleCounterOffer} className="rounded-2xl border border-emerald-500/25 bg-emerald-950/15 p-5 space-y-3">
+            <p className="text-sm font-semibold text-white">Karşı teklif</p>
+            <input
+              type="text"
+              required
+              placeholder="Kısa başlık"
+              value={offerTitle}
+              onChange={(e) => setOfferTitle(e.target.value)}
+              className={INPUT}
+            />
+            <textarea
+              required
+              rows={5}
+              minLength={CONTRACT_MIN_CHARS}
+              placeholder={`Güncellenmiş sözleşme metni (en az ${CONTRACT_MIN_CHARS} karakter)`}
+              value={offerContract}
+              onChange={(e) => setOfferContract(e.target.value)}
+              className={`${INPUT} resize-y min-h-[120px] text-sm`}
+            />
+            <input
+              type="number"
+              min={1}
+              required
+              placeholder={`Tutar (${CURRENCY_NAME})`}
+              value={offerAmount}
+              onChange={(e) =>
+                setOfferAmount(e.target.value === '' ? '' : parseInt(e.target.value, 10) || '')
+              }
+              className={INPUT}
+            />
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setShowCounterOffer(false)} className="flex-1 py-2 text-sm text-zinc-500 cursor-pointer">
+                Vazgeç
+              </button>
+              <button
+                type="submit"
+                disabled={counterLoading || offerContract.trim().length < CONTRACT_MIN_CHARS}
+                className="flex-1 py-2 text-sm font-semibold text-emerald-200 cursor-pointer"
+              >
+                {counterLoading ? '…' : 'Karşı teklifi gönder'}
+              </button>
+            </div>
+          </form>
+        )}
+
         {canPropose && (
-          <form onSubmit={handlePropose} className="rounded-2xl border border-zinc-800 bg-[#09090e] p-5 space-y-3">
+          <form onSubmit={handlePropose} className={`${CONSOLE_SURFACE} p-5 space-y-3`}>
             <p className="text-sm font-semibold text-white">Sözleşme teklifi</p>
             <p className="text-xs text-zinc-500 leading-relaxed">
               Ne isteniyor, ne teslim edilecek, süre ve kapsam — net yazın. Karşı taraf bunu onaylayınca
@@ -702,7 +1204,12 @@ export default function EscrowRoomPanel({
               className={`${INPUT} resize-none text-sm`}
             />
             <p className="text-[11px] text-zinc-500">
-              İtiraz, yukarıdaki yazılı sözleşme metnine göre incelenir.
+              İtiraz açan taraf %1 depozito öder. Haklı çıkana iade edilir; haksız çıkan kaybeder.
+              {disputeDepositTry > 0 && (
+                <span className="block mt-1 text-amber-300/90">
+                  Tahmini depozito: {formatMoney(disputeDepositTry)}
+                </span>
+              )}
             </p>
             <div className="flex gap-2">
               <button type="button" onClick={() => setShowDispute(false)} className="flex-1 py-2 text-sm text-zinc-500 cursor-pointer">
@@ -783,18 +1290,35 @@ export default function EscrowRoomPanel({
     );
   }
 
+  const renderVerificationBlocked = () => (
+    <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] p-5 space-y-3 text-center">
+      <p className="text-sm font-semibold text-amber-100">Yeni anlaşma başlatmak için doğrulama gerekli</p>
+      <p className="text-xs text-zinc-400 leading-relaxed">
+        E-posta ve kimlik (KYC) doğrulamalarını profilinden tamamladıktan sonra sözleşme
+        oluşturabilirsin.
+      </p>
+      <button
+        type="button"
+        onClick={() => onBlockedCreateContract?.()}
+        className="min-h-[44px] px-5 rounded-xl bg-white text-black text-sm font-bold cursor-pointer"
+      >
+        Doğrulamaları tamamla
+      </button>
+    </div>
+  );
+
   return (
-    <div className="max-w-lg mx-auto space-y-4 escrow-stable-scroll">
+    <div className="mx-auto w-full min-w-0 max-w-lg space-y-4 escrow-stable-scroll">
       {variant === 'my-deals' && (
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-white">Emanetlerim</h2>
-            <p className="text-xs text-zinc-500">Açık işleriniz — istediğinize tıklayın</p>
+            <h2 className="text-lg font-bold text-white">Anlaşmalarım</h2>
+            <p className="text-xs text-zinc-500">Açık ve tamamlanan anlaşmalarınız</p>
           </div>
           {!showNewConnect && (
             <button
               type="button"
-              onClick={() => setShowNewConnect(true)}
+              onClick={tryOpenNewConnect}
               className="shrink-0 min-h-[44px] px-4 rounded-xl bg-white text-black text-sm font-bold flex items-center gap-1.5 cursor-pointer"
             >
               <Plus className="h-4 w-4" /> Yeni
@@ -805,14 +1329,15 @@ export default function EscrowRoomPanel({
 
       {variant === 'start' && (
         <div className="text-center space-y-1 pb-1">
-          <h2 className="text-lg font-bold text-white">Yeni iş başlat</h2>
-          <p className="text-xs text-zinc-500">Karşı tarafın üye numarası yeterli</p>
+          <h2 className="text-lg font-bold text-white">Yeni Anlaşma</h2>
+          <p className="text-xs text-zinc-500">Karşı tarafın ZN-ID'si ile emanet bağlantısı</p>
         </div>
       )}
 
       {error && <PanelError message={error} onGoToDeposit={onGoToDeposit} />}
 
-      {(variant === 'start' || showNewConnect) && renderConnectForm()}
+      {(variant === 'start' || showNewConnect) &&
+        (canCreateContract ? renderConnectForm() : renderVerificationBlocked())}
 
       {variant === 'my-deals' && showNewConnect && (
         <button

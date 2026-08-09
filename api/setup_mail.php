@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 /**
  * SMTP kurulum — CLI:
- * php setup_mail.php --host smtp-relay.brevo.com --port 587 --user EMAIL --pass SMTP_KEY --from noreply@zinesh.com [--test alici@ornek.com]
+ * php setup_mail.php --host smtp-relay.brevo.com --port 587 --user LOGIN --pass SMTP_KEY --from verified@email.com [--test alici@ornek.com]
+ *
+ * --from: Brevo'da doğrulanmış gönderen (noreply@zinesh.com yalnızca domain SPF/DKIM sonrası).
  */
 require_once __DIR__ . '/wallet_lib.php';
 require_once __DIR__ . '/campaign_lib.php';
@@ -27,7 +29,7 @@ if (!is_array($existing)) {
 if (isset($opts['disable'])) {
     $existing['smtp'] = ['enabled' => false];
     file_put_contents($path, json_encode($existing, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-    chmod($path, 0640);
+    zinesh_secure_secrets_file($path);
     echo "SMTP devre dışı bırakıldı.\n";
     exit(0);
 }
@@ -35,17 +37,20 @@ if (isset($opts['disable'])) {
 $host = trim((string)($opts['host'] ?? ''));
 $user = trim((string)($opts['user'] ?? ''));
 $pass = (string)($opts['pass'] ?? '');
-$from = trim((string)($opts['from'] ?? 'noreply@zinesh.com'));
-if (preg_match('/@(gmail|googlemail|yahoo|hotmail|outlook)\./i', $from)) {
-    fwrite(STDERR, "Uyarı: {$from} freemail — gönderen noreply@zinesh.com olarak ayarlanıyor.\n");
-    $from = 'noreply@zinesh.com';
+$from = trim((string)($opts['from'] ?? ''));
+if ($from === '' || zinesh_mail_is_unverified_sender($from)) {
+    $verified = zinesh_mail_verified_sender_email();
+    if ($from !== '' && $from !== $verified) {
+        fwrite(STDERR, "Uyarı: {$from} Brevo'da doğrulanmamış — gönderen {$verified} olarak ayarlanıyor.\n");
+    }
+    $from = $verified;
 }
 $port = (int)($opts['port'] ?? 587);
 $encryption = strtolower(trim((string)($opts['encryption'] ?? 'tls')));
 
 if ($host === '' || $user === '' || $pass === '') {
     fwrite(STDERR, "Kullanım:\n");
-    fwrite(STDERR, "  php setup_mail.php --host SMTP_HOST --port 587 --user SMTP_USER --pass SMTP_PASS --from noreply@zinesh.com [--test email@test.com]\n");
+    fwrite(STDERR, "  php setup_mail.php --host SMTP_HOST --port 587 --user SMTP_USER --pass SMTP_PASS --from verified@email.com [--test email@test.com]\n");
     fwrite(STDERR, "  php setup_mail.php --disable\n");
     exit(1);
 }
@@ -62,7 +67,14 @@ $existing['smtp'] = [
 ];
 $existing['mail_from'] = $from;
 $replyTo = trim((string)($opts['reply-to'] ?? ''));
+if ($replyTo === '') {
+    $envReply = getenv('ZINESH_MAIL_REPLY_TO');
+    if (is_string($envReply) && trim($envReply) !== '') {
+        $replyTo = trim($envReply);
+    }
+}
 if ($replyTo !== '') {
+    $replyTo = zinesh_mail_normalize_reply_to($replyTo, $from);
     $existing['mail_reply_to'] = $replyTo;
 }
 $apiKey = trim((string)($opts['api-key'] ?? ''));
@@ -71,7 +83,7 @@ if ($apiKey !== '') {
 }
 
 file_put_contents($path, json_encode($existing, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-chmod($path, 0640);
+zinesh_secure_secrets_file($path);
 
 echo "SMTP kaydedildi: {$host}:{$port} ({$encryption})\n";
 echo "Gönderen: {$from}\n";

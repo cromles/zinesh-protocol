@@ -1,10 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Menu, X, ArrowRight, ChevronDown, LogOut, LayoutDashboard } from 'lucide-react';
 import ZineshLogo from './ZineshLogo';
+import { displayMemberTicket } from '../lib/memberTicket';
 
 interface HeaderProps {
   isLoggedIn?: boolean;
   username?: string;
+  ticketNumber?: string;
+  onLoginClick: () => void;
+  onRegisterClick: () => void;
   onJoinClick: () => void;
   onGoToConsole?: () => void;
   onLogout?: () => void;
@@ -13,6 +17,9 @@ interface HeaderProps {
 export default function Header({
   isLoggedIn = false,
   username = '',
+  ticketNumber = '',
+  onLoginClick,
+  onRegisterClick,
   onJoinClick,
   onGoToConsole,
   onLogout,
@@ -24,6 +31,9 @@ export default function Header({
   const navItems = [
     { label: 'Ana Sayfa', href: '#hero' },
     { label: 'Nasıl Çalışır?', href: '#how-it-works' },
+    { label: 'Simülatör', href: '#simulator' },
+    { label: 'Komisyon', href: '#calculator' },
+    { label: 'SSS', href: '#faq' },
     { label: 'İletişim', href: '#footer' },
   ];
 
@@ -77,17 +87,20 @@ export default function Header({
     onGoToConsole?.();
   };
 
+  const memberId = displayMemberTicket(ticketNumber);
+
   const desktopCta = isLoggedIn ? (
     <div className="flex items-center gap-2">
       <button
         onClick={goToConsole}
         id="header-cta-btn"
-        className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-full bg-white px-5 py-2 font-sans text-sm font-semibold text-black transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-purple-500/15 cursor-pointer"
+        type="button"
+        aria-label="Hesabıma git"
+        className="group relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full bg-emerald-400 px-5 py-2 font-sans text-sm font-semibold text-slate-950 shadow-md shadow-emerald-950/30 transition-all hover:bg-emerald-300"
       >
         <span className="relative z-10 flex items-center gap-1.5">
-          Hesabıma Git <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          Hesabıma Git <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
         </span>
-        <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-sky-100 via-white to-orange-100 group-hover:translate-x-0 transition-transform duration-500" />
       </button>
 
       {username && (
@@ -95,31 +108,35 @@ export default function Header({
           <button
             type="button"
             onClick={() => setUserMenuOpen((v) => !v)}
-            className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-zinc-200 hover:bg-white/10 hover:text-white transition cursor-pointer"
+            className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-emerald-500/40 hover:text-white"
             aria-expanded={userMenuOpen}
             aria-haspopup="menu"
+            aria-label={`Hesap menüsü, ${username}`}
           >
             <span className="max-w-[100px] truncate">{username}</span>
-            <ChevronDown className={`h-3.5 w-3.5 text-zinc-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`h-3.5 w-3.5 text-zinc-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} aria-hidden />
           </button>
 
           {userMenuOpen && (
               <div
-                className="absolute right-0 top-full mt-2 w-48 rounded-xl border border-white/10 bg-zinc-950/95 backdrop-blur-md shadow-xl overflow-hidden z-50 menu-pop-in"
+                className="menu-pop-in absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-xl border border-slate-800 bg-slate-950/95 shadow-xl backdrop-blur-md"
                 role="menu"
               >
-                <div className="px-3 py-2.5 border-b border-white/5">
-                  <p className="text-[10px] font-mono text-zinc-400 uppercase">Hesap</p>
+                <div className="px-3 py-2.5 border-b border-slate-800">
+                  <p className="text-[10px] font-mono uppercase text-slate-500">Hesap</p>
                   <p className="text-sm font-semibold text-white truncate">{username}</p>
+                  {memberId && (
+                    <p className="text-[10px] font-mono text-emerald-400 mt-0.5">ZN-{memberId}</p>
+                  )}
                 </div>
                 <button
                   type="button"
                   onClick={goToConsole}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-zinc-200 hover:bg-white/5 hover:text-white transition cursor-pointer"
+                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-sm text-slate-200 transition hover:bg-slate-800 hover:text-white"
                   role="menuitem"
                 >
-                  <LayoutDashboard className="h-4 w-4 text-purple-400" />
-                  Konsoluma Git
+                  <LayoutDashboard className="h-4 w-4 text-emerald-400" aria-hidden />
+                  Konsol
                 </button>
                 {onLogout && (
                   <button
@@ -131,7 +148,7 @@ export default function Header({
                     className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-zinc-400 hover:bg-red-500/10 hover:text-red-300 transition cursor-pointer border-t border-white/5"
                     role="menuitem"
                   >
-                    <LogOut className="h-4 w-4" />
+                    <LogOut className="h-4 w-4" aria-hidden />
                     Çıkış Yap
                   </button>
                 )}
@@ -141,23 +158,39 @@ export default function Header({
       )}
     </div>
   ) : (
-    <button
-      onClick={onJoinClick}
-      id="header-cta-btn"
-      className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-full bg-white px-5 py-2 font-sans text-sm font-semibold text-black transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-purple-500/15 cursor-pointer"
-    >
-      <span className="relative z-10 flex items-center gap-1.5">
-        Üye Ol / Giriş Yap <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-      </span>
-      <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-sky-100 via-white to-orange-100 group-hover:translate-x-0 transition-transform duration-500" />
-    </button>
+    <div className="flex items-center gap-2">
+      <button
+        onClick={onLoginClick}
+        type="button"
+        aria-label="Giriş yap"
+        className="cursor-pointer rounded-full border border-slate-700 bg-slate-900/80 px-4 py-2 font-sans text-sm font-semibold text-slate-200 transition hover:border-emerald-500/40 hover:text-white"
+      >
+        Giriş Yap
+      </button>
+      <button
+        onClick={onRegisterClick}
+        id="header-cta-btn"
+        type="button"
+        aria-label="Kayıt ol"
+        className="group relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full bg-emerald-400 px-5 py-2 font-sans text-sm font-semibold text-slate-950 shadow-md shadow-emerald-950/30 transition-all hover:bg-emerald-300"
+      >
+        <span className="relative z-10 flex items-center gap-1.5">
+          Kayıt Ol <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+        </span>
+      </button>
+    </div>
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#020203]/80 backdrop-blur-md safe-pad-t">
+    <header className="safe-pad-t sticky top-0 z-50 w-full border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl h-16 sm:h-20 items-center justify-between safe-pad-x">
         
-        <a href="#hero" className="flex items-center gap-3 group min-w-0">
+        <a
+          href="#hero"
+          onClick={(e) => handleSmoothScroll(e, '#hero')}
+          className="flex items-center gap-3 group min-w-0"
+          aria-label="Zinesh ana sayfa"
+        >
           <ZineshLogo 
             size="sm" 
             showText={false}
@@ -166,25 +199,25 @@ export default function Header({
           />
           
           <div className="flex flex-col min-w-0">
-            <span className="font-display text-xl font-black uppercase text-white tracking-[0.02em] group-hover:text-purple-300 transition-colors duration-150">
+            <span className="font-display text-xl font-black uppercase tracking-[0.02em] text-white transition-colors duration-150 group-hover:text-emerald-300">
               ZINESH
             </span>
-            <span className="font-mono text-[8px] uppercase tracking-[0.25em] text-purple-400/95 font-bold -mt-0.5">
+            <span className="-mt-0.5 font-mono text-[8px] font-bold uppercase tracking-[0.25em] text-emerald-400/95">
               GÜVENLİ EMANET
             </span>
           </div>
         </a>
 
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-1" aria-label="Ana menü">
           {navItems.map((item) => (
             <a
               key={item.label}
               href={item.href}
               onClick={(e) => handleSmoothScroll(e, item.href)}
-              className="px-2.5 lg:px-3.5 py-2 font-sans text-xs lg:text-sm font-medium text-zinc-400 hover:text-white transition-colors duration-150 relative group"
+              className="home-nav-link group relative px-2.5 py-2 font-sans text-xs font-medium text-slate-400 transition-colors duration-150 hover:text-emerald-300 lg:px-3.5 lg:text-sm"
             >
               {item.label}
-              <span className="absolute bottom-0 left-3 right-3 h-[1px] bg-gradient-to-r from-sky-400 to-orange-400 scale-x-0 group-hover:scale-x-100 transition-transform duration-200" />
+              <span className="absolute bottom-0 left-3 right-3 h-[1px] scale-x-0 bg-gradient-to-r from-emerald-400 to-teal-400 transition-transform duration-200 group-hover:scale-x-100" />
             </a>
           ))}
         </nav>
@@ -194,16 +227,21 @@ export default function Header({
         </div>
 
         <button
+          type="button"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="flex md:hidden h-11 w-11 items-center justify-center rounded-lg border border-white/10 text-zinc-400 hover:text-white touch-target"
-          aria-label="Toggle Menu"
+          className="flex md:hidden h-11 w-11 items-center justify-center rounded-xl border border-white/[0.1] bg-white/[0.03] text-zinc-400 hover:text-white hover:border-white/15 hover:bg-white/[0.06] transition-colors duration-200 touch-target"
+          aria-label={mobileMenuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
+          aria-expanded={mobileMenuOpen}
+          aria-controls="mobile-nav"
         >
-          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          {mobileMenuOpen ? <X className="h-5 w-5" aria-hidden /> : <Menu className="h-5 w-5" aria-hidden />}
         </button>
       </div>
 
-      <div
-        className={`md:hidden border-t border-white/5 bg-zinc-950 safe-pad-x overflow-hidden transition-[max-height,opacity] duration-200 ease-out ${
+      <nav
+        id="mobile-nav"
+        aria-label="Mobil menü"
+        className={`safe-pad-x overflow-hidden border-t border-slate-800 bg-slate-950 transition-[max-height,opacity] duration-200 ease-out md:hidden ${
           mobileMenuOpen ? 'max-h-[640px] opacity-100 py-6' : 'max-h-0 opacity-0 py-0'
         }`}
       >
@@ -219,46 +257,66 @@ export default function Header({
                 </a>
               ))}
               
-              <div className="pt-4 space-y-3">
+              <div className="space-y-3 pt-4">
                 {isLoggedIn ? (
                   <>
                     {username && (
-                      <p className="text-center text-sm text-zinc-400">
-                        Merhaba, <span className="text-white font-semibold">{username}</span>
+                      <p className="text-center text-sm text-slate-400">
+                        Merhaba, <span className="font-semibold text-white">{username}</span>
+                        {memberId && (
+                          <span className="mt-1 block font-mono text-[10px] text-emerald-400">ZN-{memberId}</span>
+                        )}
                       </p>
                     )}
                     <button
+                      type="button"
                       onClick={goToConsole}
-                      className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-3 font-semibold text-black hover:bg-zinc-100"
+                      aria-label="Konsola git"
+                      className="flex w-full items-center justify-center gap-2 rounded-full bg-emerald-400 px-5 py-3 font-semibold text-slate-950"
                     >
-                      Konsoluma Git <ArrowRight className="h-4 w-4" />
+                      Konsol <ArrowRight className="h-4 w-4" aria-hidden />
                     </button>
                     {onLogout && (
                       <button
+                        type="button"
                         onClick={() => {
                           setMobileMenuOpen(false);
                           onLogout();
                         }}
-                        className="flex w-full items-center justify-center gap-2 rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-zinc-300 hover:text-white"
+                        aria-label="Çıkış yap"
+                        className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-700 px-5 py-3 text-sm font-semibold text-slate-300 hover:text-white"
                       >
                         Çıkış Yap
                       </button>
                     )}
                   </>
                 ) : (
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      onJoinClick();
-                    }}
-                    className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-3 font-semibold text-black hover:bg-zinc-100"
-                  >
-                    Üye Ol / Giriş Yap <ArrowRight className="h-4 w-4" />
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        onLoginClick();
+                      }}
+                      className="flex w-full items-center justify-center rounded-full border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-200"
+                    >
+                      Giriş Yap
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        onRegisterClick();
+                      }}
+                      className="flex w-full items-center justify-center rounded-full bg-emerald-400 px-4 py-3 font-semibold text-slate-950"
+                    >
+                      Kayıt Ol
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
-      </div>
+      </nav>
     </header>
   );
 }

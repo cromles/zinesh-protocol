@@ -25,7 +25,7 @@ function asyncCssPlugin(): Plugin {
 
 /** Lazy chunk'lar için modulepreload üretme — critical path'i şişirmez. */
 const DEFERRED_CHUNK_PATTERN =
-  /(?:firebase|motion|vendor-lucide|AlphaConsole|LeadModal|FoundingCampaign|HowItWorks|SolutionSection|EconomicModel|ZineshEmergence|Footer)/;
+  /(?:firebase|motion|vendor-lucide|AlphaConsole|LeadModal|Toaster|FoundingCampaign|HowItWorks|SolutionSection|EconomicModel|ZineshEmergence|Footer)/;
 
 function manualVendorChunk(id: string): string | undefined {
   if (!id.includes('node_modules')) return undefined;
@@ -33,9 +33,6 @@ function manualVendorChunk(id: string): string | undefined {
   // React'i motion'dan ÖNCE ayır — aksi halde index.js motion chunk'ına bağımlı kalır (~70 KiB unused JS)
   if (id.includes('react-dom') || id.includes('/react/') || id.includes('\\react\\')) {
     return 'vendor-react';
-  }
-  if (id.includes('firebase') || id.includes('@firebase')) {
-    return 'firebase';
   }
   if (id.includes('motion')) {
     return 'motion';
@@ -80,10 +77,10 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
       proxy: {
-        '/api/events.php': {
-          target: 'https://www.zinesh.com',
+        '/api': {
+          target: process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8787',
           changeOrigin: true,
-          secure: true,
+          secure: false,
         },
       },
     },

@@ -9,6 +9,11 @@
   <FilesMatch "\.(js|css|png|jpg|jpeg|webp|svg|ico|woff2?|webmanifest)$">
     Header set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
+
+  # SEO / keşif dosyaları — edge cache
+  <FilesMatch "^(robots\.txt|llms\.txt|sitemap\.xml)$">
+    Header set Cache-Control "public, max-age=86400"
+  </FilesMatch>
 </IfModule>
 
 Options -Indexes

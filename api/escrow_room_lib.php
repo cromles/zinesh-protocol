@@ -5,6 +5,7 @@ require_once __DIR__ . '/wallet_lib.php';
 require_once __DIR__ . '/tl_mode_lib.php';
 require_once __DIR__ . '/escrow_jobs_lib.php';
 require_once __DIR__ . '/eslesme_sinyal_lib.php';
+require_once __DIR__ . '/escrow_memory_lib.php';
 
 const ZINESH_ESCROW_ROOMS_FILE = 'escrow_rooms.json';
 const ZINESH_ESCROW_ROOM_MSG_FILE = 'escrow_room_messages.json';
@@ -13,6 +14,264 @@ const ZINESH_ESCROW_COMMISSION_RATE = 0.05;
 const ZINESH_ESCROW_DISPUTE_FEE_RATE = 0.01;
 const ZINESH_ESCROW_COLLATERAL_RATE = 0.20;
 const ZINESH_ESCROW_TRUST_PENALTY = 5.0;
+/** locking / settling geçici durumları — süre aşımında otomatik kurtarma */
+const ZINESH_ESCROW_TRANSIENT_TTL_SEC = 600;
+
+function zinesh_escrow_room_transient_expired(?string $isoAt): bool
+{
+    if ($isoAt === null || trim($isoAt) === '') {
+        return true;
+    }
+    $ts = strtotime($isoAt);
+    if ($ts === false || $ts <= 0) {
+        return true;
+    }
+    return (time() - $ts) >= ZINESH_ESCROW_TRANSIENT_TTL_SEC;
+}
+
+/** @param array<string,mixed> $room */
+function zinesh_escrow_room_release_locking_hold(array $room): void
+{
+    $employerUid = (string)($room['employerUid'] ?? '');
+    $workerUid = (string)($room['workerUid'] ?? '');
+    $amount = round((float)($room['agreedAmountTry'] ?? 0), 2);
+    $collateralAmount = round((float)($room['lockingCollateralTry'] ?? 0), 2);
+
+    if (!empty($room['lockingEmployerFunded']) && $employerUid !== '' && $amount > 0) {
+        zinesh_update_user($employerUid, static function (array &$u) use ($amount) {
+            zinesh_ensure_wallet_fields($u);
+            $u['escrowBalance'] = round(max(0, (float)$u['escrowBalance'] - $amount), 2);
+        });
+    }
+    if (!empty($room['lockingWorkerCollateralFunded']) && $workerUid !== '' && $collateralAmount > 0) {
+        zinesh_update_user($workerUid, static function (array &$u) use ($collateralAmount) {
+            zinesh_ensure_wallet_fields($u);
+            $u['escrowBalance'] = round(max(0, (float)$u['escrowBalance'] - $collateralAmount), 2);
+        });
+    }
+}
+
+/**
+ * Settlement wallet commit kanıtı: claim anındaki snapshot ile users.json karşılaştırılır.
+ *
+ * @param array<string,mixed> $room
+ */
+function zinesh_escrow_room_settlement_wallet_committed(array $room): bool
+{
+    $employerUid = (string)($room['employerUid'] ?? '');
+    if ($employerUid === '') {
+        return false;
+    }
+    if (!array_key_exists('settlingSnapshotEmployerEscrow', $room)
+        || !array_key_exists('settlingSnapshotEmployerUsdt', $room)) {
+        return false;
+    }
+    $lockTry = round((float)($room['settlingSnapshotLockTry'] ?? $room['employerLockedTry'] ?? $room['agreedAmountTry'] ?? 0), 2);
+    if ($lockTry < 1) {
+        return false;
+    }
+    $escrowBefore = round((float)$room['settlingSnapshotEmployerEscrow'], 2);
+    $usdtBefore = round((float)$room['settlingSnapshotEmployerUsdt'], 2);
+
+    $employer = zinesh_find_user_by_uid($employerUid);
+    if ($employer === null) {
+        return false;
+    }
+    zinesh_ensure_wallet_fields($employer);
+    $escrowDelta = round($escrowBefore - (float)$employer['escrowBalance'], 2);
+    $usdtDelta = round($usdtBefore - (float)$employer['usdtBalance'], 2);
+
+    return $escrowDelta + 1e-9 >= $lockTry && $usdtDelta + 1e-9 >= $lockTry;
+}
+
+/**
+ * Süresi dolmuş locking/settling odalarını kurtarır.
+ *
+ * @return array{recovered:bool,action?:string,roomId?:string}
+ */
+function zinesh_escrow_room_recover_stale_transient_if_needed(string $roomId): array
+{
+    $snapshot = null;
+    $action = null;
+
+    zinesh_json_atomic(ZINESH_ESCROW_ROOMS_FILE, static function (array &$rows) use ($roomId, &$snapshot, &$action) {
+        foreach ($rows as $i => $row) {
+            if ((string)($row['id'] ?? '') !== $roomId) {
+                continue;
+            }
+            $status = (string)($row['status'] ?? '');
+
+            if ($status === 'locking') {
+                $abandoned = empty($row['lockingEmployerFunded']) && empty($row['lockingWorkerCollateralFunded']);
+                if (
+                    !$abandoned
+                    && !zinesh_escrow_room_transient_expired((string)($row['lockingAt'] ?? ''))
+                ) {
+                    return false;
+                }
+                $snapshot = $row;
+                $action = 'locking_revert';
+                $rows[$i]['status'] = 'terms_pending';
+                unset(
+                    $rows[$i]['lockingAt'],
+                    $rows[$i]['lockingEmployerFunded'],
+                    $rows[$i]['lockingWorkerCollateralFunded'],
+                    $rows[$i]['lockingCollateralTry']
+                );
+                return true;
+            }
+
+            if ($status === 'settling') {
+                if (!zinesh_escrow_room_transient_expired((string)($row['settlingAt'] ?? ''))) {
+                    return false;
+                }
+                $snapshot = $row;
+                $walletCommitted = !empty($row['settlingWalletApplied'])
+                    || zinesh_escrow_room_settlement_wallet_committed($row);
+                if ($walletCommitted) {
+                    $action = 'settling_complete';
+                    $amount = round((float)($row['employerLockedTry'] ?? $row['agreedAmountTry'] ?? 0), 2);
+                    $commission = round($amount * ZINESH_ESCROW_COMMISSION_RATE, 2);
+                    $payout = round($amount - $commission, 2);
+                    $rows[$i]['status'] = 'completed';
+                    $rows[$i]['completedAt'] = date('c');
+                    $rows[$i]['commissionTry'] = $commission;
+                    $rows[$i]['payoutTry'] = $payout;
+                    $rows[$i]['employerUsdtDebited'] = true;
+                    unset(
+                        $rows[$i]['settlingAt'],
+                        $rows[$i]['settlingPreviousStatus'],
+                        $rows[$i]['settlingWalletApplied'],
+                        $rows[$i]['settlingSnapshotEmployerEscrow'],
+                        $rows[$i]['settlingSnapshotEmployerUsdt'],
+                        $rows[$i]['settlingSnapshotLockTry']
+                    );
+                } else {
+                    $action = 'settling_revert';
+                    $fallback = (string)($row['settlingPreviousStatus'] ?? '');
+                    if (!in_array($fallback, ['locked', 'completion_pending'], true)) {
+                        $fallback = !empty($row['employerConfirmedComplete']) && !empty($row['workerConfirmedComplete'])
+                            ? 'completion_pending'
+                            : 'locked';
+                    }
+                    $rows[$i]['status'] = $fallback;
+                    unset(
+                        $rows[$i]['settlingAt'],
+                        $rows[$i]['settlingPreviousStatus'],
+                        $rows[$i]['settlingWalletApplied'],
+                        $rows[$i]['settlingSnapshotEmployerEscrow'],
+                        $rows[$i]['settlingSnapshotEmployerUsdt'],
+                        $rows[$i]['settlingSnapshotLockTry']
+                    );
+                }
+                return true;
+            }
+
+            return false;
+        }
+        return false;
+    });
+
+    if ($snapshot === null || $action === null) {
+        return ['recovered' => false];
+    }
+
+    if ($action === 'locking_revert') {
+        zinesh_escrow_room_release_locking_hold($snapshot);
+        zinesh_escrow_room_add_message(
+            $roomId,
+            'system',
+            'Sistem',
+            'Kilit işlemi zaman aşımına uğradı; anlaşma tekrar onay bekliyor. Gerekirse iş alan tekrar onaylayabilir.',
+            'system'
+        );
+        zinesh_audit('escrow_room_locking_recovered', ['roomId' => $roomId]);
+        zinesh_escrow_memory_on_recovered($roomId, 'locking_revert');
+    } elseif ($action === 'settling_revert') {
+        zinesh_escrow_room_add_message(
+            $roomId,
+            'system',
+            'Sistem',
+            'Ödeme işlemi zaman aşımına uğradı; iş kaldığı yerden devam edebilir. Tamamlama onayını tekrar deneyin.',
+            'system'
+        );
+        zinesh_audit('escrow_room_settling_recovered', ['roomId' => $roomId, 'mode' => 'revert']);
+        zinesh_escrow_memory_on_recovered($roomId, 'settling_revert');
+    } else {
+        zinesh_audit('escrow_room_settling_recovered', ['roomId' => $roomId, 'mode' => 'complete']);
+        zinesh_escrow_memory_on_recovered($roomId, 'settling_complete');
+    }
+
+    return ['recovered' => true, 'action' => $action, 'roomId' => $roomId];
+}
+
+function zinesh_escrow_room_recover_all_stale_transients(): void
+{
+    foreach (zinesh_escrow_rooms_load() as $room) {
+        $status = (string)($room['status'] ?? '');
+        if (!in_array($status, ['locking', 'settling'], true)) {
+            continue;
+        }
+        $roomId = (string)($room['id'] ?? '');
+        if ($roomId !== '') {
+            zinesh_escrow_room_recover_stale_transient_if_needed($roomId);
+        }
+    }
+}
+
+/** @return array{ok:bool,message?:string,code?:string,email_verified?:bool,phone_verified?:bool,kyc_verified?:bool,missing?:list<string>,httpStatus?:int} */
+function zinesh_escrow_contract_verification_gate(array $user): array
+{
+    require_once __DIR__ . '/verification_lib.php';
+    $verification = zinesh_contract_verification_status($user);
+    if ($verification['ok']) {
+        return ['ok' => true];
+    }
+    $labels = [
+        'email' => 'e-posta',
+        'phone' => 'telefon',
+        'kyc' => 'kimlik (KYC)',
+    ];
+    $parts = array_map(static fn(string $key) => $labels[$key] ?? $key, $verification['missing']);
+    return [
+        'ok' => false,
+        'message' => 'İşlem için '
+            . implode(', ', $parts)
+            . ' doğrulamasını tamamlamanız gerekir.',
+        'code' => 'verification_required',
+        'email_verified' => $verification['email_verified'],
+        'phone_verified' => $verification['phone_verified'],
+        'kyc_verified' => $verification['kyc_verified'],
+        'missing' => $verification['missing'],
+        'httpStatus' => 403,
+    ];
+}
+
+function zinesh_escrow_room_patch_fields(string $roomId, array $fields, ?string $requiredStatus = null): bool
+{
+    $ok = false;
+    zinesh_json_atomic(ZINESH_ESCROW_ROOMS_FILE, static function (array &$rows) use ($roomId, $fields, $requiredStatus, &$ok) {
+        foreach ($rows as $i => $row) {
+            if ((string)($row['id'] ?? '') !== $roomId) {
+                continue;
+            }
+            if ($requiredStatus !== null && (string)($row['status'] ?? '') !== $requiredStatus) {
+                return false;
+            }
+            foreach ($fields as $key => $value) {
+                if ($value === null) {
+                    unset($rows[$i][$key]);
+                } else {
+                    $rows[$i][$key] = $value;
+                }
+            }
+            $ok = true;
+            return true;
+        }
+        return false;
+    });
+    return $ok;
+}
 
 function zinesh_escrow_room_notify_peer(array $room, string $fromUid, string $type, string $title, string $message, array $meta = []): void
 {
@@ -47,6 +306,7 @@ function zinesh_escrow_room_new_id(): string
 
 function zinesh_escrow_room_find(string $roomId): ?array
 {
+    zinesh_escrow_room_recover_stale_transient_if_needed($roomId);
     foreach (zinesh_escrow_rooms_load() as $room) {
         if ((string)($room['id'] ?? '') === $roomId) {
             return $room;
@@ -97,9 +357,14 @@ function zinesh_escrow_room_public(array $room, string $viewerUid): array
         'workerLockedTry' => (float)($room['workerLockedTry'] ?? 0),
         'employerConfirmedComplete' => !empty($room['employerConfirmedComplete']),
         'workerConfirmedComplete' => !empty($room['workerConfirmedComplete']),
-        'disputeFeeTry' => (float)($room['disputeFeeTry'] ?? 0),
+        'disputeFeeTry' => (float)($room['disputeFeeTry'] ?? $room['disputeDepositTry'] ?? 0),
+        'disputeDepositTry' => (float)($room['disputeDepositTry'] ?? $room['disputeFeeTry'] ?? 0),
+        'termsProposedBy' => (string)($room['termsProposedBy'] ?? 'employer'),
+        'termsChangeRequested' => !empty($room['termsChangeRequested']),
+        'termsChangeNote' => (string)($room['termsChangeNote'] ?? ''),
         'myRole' => $role,
         'createdAt' => (string)($room['createdAt'] ?? ''),
+        'termsProposedAt' => (string)($room['termsProposedAt'] ?? ''),
         'lockedAt' => (string)($room['lockedAt'] ?? ''),
         'completedAt' => (string)($room['completedAt'] ?? ''),
         'dispute' => is_array($room['dispute'] ?? null) ? $room['dispute'] : null,
@@ -111,6 +376,7 @@ function zinesh_escrow_room_public(array $room, string $viewerUid): array
 /** @return list<array<string,mixed>> */
 function zinesh_escrow_rooms_for_user(string $uid): array
 {
+    zinesh_escrow_room_recover_all_stale_transients();
     $out = [];
     foreach (zinesh_escrow_rooms_load() as $room) {
         if (zinesh_escrow_room_is_participant($room, $uid)) {
@@ -127,7 +393,7 @@ function zinesh_escrow_room_open_between(string $uidA, string $uidB): ?array
         $e = (string)($room['employerUid'] ?? '');
         $w = (string)($room['workerUid'] ?? '');
         $status = (string)($room['status'] ?? '');
-        if (!in_array($status, ['negotiating', 'terms_pending', 'locked', 'completion_pending', 'disputed'], true)) {
+        if (!in_array($status, ['negotiating', 'terms_pending', 'locking', 'locked', 'completion_pending', 'settling', 'disputed'], true)) {
             continue;
         }
         if (($e === $uidA && $w === $uidB) || ($e === $uidB && $w === $uidA)) {
@@ -171,6 +437,12 @@ function zinesh_escrow_room_connect(array $user, string $peerTicket, string $myR
     $existing = zinesh_escrow_room_open_between($myUid, $peerUid);
     if ($existing) {
         return ['ok' => true, 'room' => zinesh_escrow_room_public($existing, $myUid), 'message' => 'Mevcut görüşme odası açıldı.'];
+    }
+
+    require_once __DIR__ . '/verification_lib.php';
+    $gate = zinesh_escrow_contract_verification_gate($user);
+    if (!$gate['ok']) {
+        return $gate;
     }
 
     $employerUid = $role === 'employer' ? $myUid : $peerUid;
@@ -402,7 +674,10 @@ function zinesh_escrow_room_propose_terms(
             $rows[$i]['description'] = $description;
             $rows[$i]['employerRequestsCollateral'] = $requestCollateral;
             $rows[$i]['status'] = 'terms_pending';
+            $rows[$i]['termsProposedAt'] = date('c');
+            $rows[$i]['termsProposedBy'] = 'employer';
             $rows[$i]['workerRequestsCollateral'] = false;
+            unset($rows[$i]['termsChangeRequested'], $rows[$i]['termsChangeNote'], $rows[$i]['termsRejectedAt']);
             $updated = $rows[$i];
             return true;
         }
@@ -424,8 +699,12 @@ function zinesh_escrow_room_propose_terms(
             mb_strlen($description) > 160 ? (mb_substr($description, 0, 160) . '…') : $description
         ),
         'terms_offer',
-        ['amountTry' => $amountTry, 'requestCollateral' => $requestCollateral]
+        ['amountTry' => $amountTry, 'requestCollateral' => $requestCollateral, 'proposedBy' => 'employer']
     );
+    zinesh_audit('escrow_room_terms_proposed', ['roomId' => $roomId, 'proposedBy' => 'employer', 'amountTry' => $amountTry]);
+
+    $freshForMemory = zinesh_escrow_room_find($roomId) ?? $updated;
+    zinesh_escrow_memory_on_terms_version($freshForMemory, $user, 'employer', 'propose');
 
     $fresh = zinesh_escrow_room_find($roomId) ?? $updated;
     zinesh_escrow_room_notify_peer(
@@ -452,13 +731,29 @@ function zinesh_escrow_room_propose_terms(
 /** @return array{ok:bool,message?:string,room?:array,wallet?:array} */
 function zinesh_escrow_room_accept_terms(array $user, string $roomId, bool $workerRequestsCollateral): array
 {
+    $gate = zinesh_escrow_contract_verification_gate($user);
+    if (!$gate['ok']) {
+        return $gate;
+    }
+
     $room = zinesh_escrow_room_find($roomId);
     if (!$room) {
         return ['ok' => false, 'message' => 'Oda bulunamadı.'];
     }
     $uid = (string)($user['uid'] ?? '');
-    if ((string)($room['workerUid'] ?? '') !== $uid) {
+    $termsProposedBy = (string)($room['termsProposedBy'] ?? 'employer');
+    $employerUid = (string)($room['employerUid'] ?? '');
+    $workerUid = (string)($room['workerUid'] ?? '');
+
+    if ($termsProposedBy === 'worker') {
+        if ($uid !== $employerUid) {
+            return ['ok' => false, 'message' => 'Karşı teklifi yalnızca işveren onaylayabilir.'];
+        }
+    } elseif ($uid !== $workerUid) {
         return ['ok' => false, 'message' => 'Anlaşmayı yalnızca iş alan onaylayabilir.'];
+    }
+    if ((string)($room['status'] ?? '') === 'locking') {
+        return ['ok' => false, 'message' => 'Anlaşma kilitleniyor. Birkaç saniye sonra tekrar dene.'];
     }
     if ((string)($room['status'] ?? '') !== 'terms_pending') {
         return ['ok' => false, 'message' => 'Bekleyen teklif yok.'];
@@ -472,26 +767,69 @@ function zinesh_escrow_room_accept_terms(array $user, string $roomId, bool $work
         return ['ok' => false, 'message' => 'Geçersiz teklif tutarı.'];
     }
 
-    $employerRequests = !empty($room['employerRequestsCollateral']);
-    $collateralActive = $employerRequests && $workerRequestsCollateral;
-    $collateralAmount = $collateralActive ? round($amount * ZINESH_ESCROW_COLLATERAL_RATE, 2) : 0.0;
-
-    if ($collateralActive) {
+    if ($termsProposedBy === 'worker') {
+        $collateralActive = !empty($room['workerRequestsCollateral']);
+        $collateralAmount = $collateralActive ? round($amount * ZINESH_ESCROW_COLLATERAL_RATE, 2) : 0.0;
+        if ($collateralActive) {
+            $workerUser = zinesh_find_user_by_uid($workerUid) ?? $user;
+            zinesh_ensure_wallet_fields($workerUser);
+            $workerAvailable = round((float)$workerUser['usdtBalance'] - (float)$workerUser['escrowBalance'], 2);
+            if ($workerAvailable + 1e-9 < $collateralAmount) {
+                return [
+                    'ok' => false,
+                    'message' => sprintf(
+                        'İş alanın teminat bakiyesi yetersiz (%s TL gerekli). Karşı teklif onaylanamadı.',
+                        number_format($collateralAmount, 2, ',', '.')
+                    ),
+                ];
+            }
+        }
         zinesh_ensure_wallet_fields($user);
-        $workerAvailable = round((float)$user['usdtBalance'] - (float)$user['escrowBalance'], 2);
-        if ($workerAvailable + 1e-9 < $collateralAmount) {
+        $employerAvailable = round((float)$user['usdtBalance'] - (float)$user['escrowBalance'], 2);
+        if ($employerAvailable + 1e-9 < $amount) {
             return [
                 'ok' => false,
                 'message' => sprintf(
-                    'Teminat için yeterli bakiyen yok. Gerekli: %s TL.',
-                    number_format($collateralAmount, 2, ',', '.')
+                    'Yetersiz bakiye. Anlaşma için en az %s TL kullanılabilir bakiye gerekir.',
+                    number_format($amount, 0, ',', '.')
                 ),
             ];
         }
-    }
+    } else {
+        $employerRequests = !empty($room['employerRequestsCollateral']);
+        $collateralActive = $employerRequests && $workerRequestsCollateral;
+        $collateralAmount = $collateralActive ? round($amount * ZINESH_ESCROW_COLLATERAL_RATE, 2) : 0.0;
 
-    $employerUid = (string)($room['employerUid'] ?? '');
-    $workerUid = (string)($room['workerUid'] ?? '');
+        $employerUser = zinesh_find_user_by_uid($employerUid);
+        if ($employerUser === null) {
+            return ['ok' => false, 'message' => 'İşveren hesabı bulunamadı.'];
+        }
+        zinesh_ensure_wallet_fields($employerUser);
+        $employerAvailable = round((float)$employerUser['usdtBalance'] - (float)$employerUser['escrowBalance'], 2);
+        if ($employerAvailable + 1e-9 < $amount) {
+            return [
+                'ok' => false,
+                'message' => sprintf(
+                    'İşverenin bakiyesi yetersiz. Anlaşma için en az %s TL kullanılabilir bakiye gerekir.',
+                    number_format($amount, 0, ',', '.')
+                ),
+            ];
+        }
+
+        if ($collateralActive) {
+            zinesh_ensure_wallet_fields($user);
+            $workerAvailable = round((float)$user['usdtBalance'] - (float)$user['escrowBalance'], 2);
+            if ($workerAvailable + 1e-9 < $collateralAmount) {
+                return [
+                    'ok' => false,
+                    'message' => sprintf(
+                        'Teminat için yeterli bakiyen yok. Gerekli: %s TL.',
+                        number_format($collateralAmount, 2, ',', '.')
+                    ),
+                ];
+            }
+        }
+    }
 
     $claimed = false;
     zinesh_json_atomic(ZINESH_ESCROW_ROOMS_FILE, static function (array &$rows) use ($roomId, &$claimed) {
@@ -503,6 +841,12 @@ function zinesh_escrow_room_accept_terms(array $user, string $roomId, bool $work
                 return false;
             }
             $rows[$i]['status'] = 'locking';
+            $rows[$i]['lockingAt'] = date('c');
+            unset(
+                $rows[$i]['lockingEmployerFunded'],
+                $rows[$i]['lockingWorkerCollateralFunded'],
+                $rows[$i]['lockingCollateralTry']
+            );
             $claimed = true;
             return true;
         }
@@ -513,6 +857,16 @@ function zinesh_escrow_room_accept_terms(array $user, string $roomId, bool $work
     }
 
     $rollbackRoom = static function () use ($roomId): void {
+        $snap = null;
+        foreach (zinesh_escrow_rooms_load() as $row) {
+            if ((string)($row['id'] ?? '') === $roomId) {
+                $snap = $row;
+                break;
+            }
+        }
+        if ($snap && (string)($snap['status'] ?? '') === 'locking') {
+            zinesh_escrow_room_release_locking_hold($snap);
+        }
         zinesh_json_atomic(ZINESH_ESCROW_ROOMS_FILE, static function (array &$rows) use ($roomId) {
             foreach ($rows as $i => $row) {
                 if ((string)($row['id'] ?? '') !== $roomId) {
@@ -520,6 +874,12 @@ function zinesh_escrow_room_accept_terms(array $user, string $roomId, bool $work
                 }
                 if ((string)($row['status'] ?? '') === 'locking') {
                     $rows[$i]['status'] = 'terms_pending';
+                    unset(
+                        $rows[$i]['lockingAt'],
+                        $rows[$i]['lockingEmployerFunded'],
+                        $rows[$i]['lockingWorkerCollateralFunded'],
+                        $rows[$i]['lockingCollateralTry']
+                    );
                 }
                 return true;
             }
@@ -533,14 +893,15 @@ function zinesh_escrow_room_accept_terms(array $user, string $roomId, bool $work
             zinesh_ensure_wallet_fields($u);
             $available = round((float)$u['usdtBalance'] - (float)$u['escrowBalance'], 2);
             if ($available + 1e-9 < $amount) {
-                zinesh_json_response(['message' => 'İşverenin bakiyesi yetersiz; anlaşma kilitlenemedi.'], 400);
+                zinesh_wallet_abort('İşverenin bakiyesi yetersiz; anlaşma kilitlenemedi.');
             }
             $u['escrowBalance'] = round((float)$u['escrowBalance'] + $amount, 2);
         });
     } catch (Throwable $e) {
         $rollbackRoom();
-        return ['ok' => false, 'message' => 'İşveren bakiyesi kilitlenemedi.'];
+        return ['ok' => false, 'message' => $e->getMessage() ?: 'İşveren bakiyesi kilitlenemedi.'];
     }
+    zinesh_escrow_room_patch_fields($roomId, ['lockingEmployerFunded' => true], 'locking');
 
     // Lock worker collateral if bilateral
     if ($collateralActive) {
@@ -549,7 +910,7 @@ function zinesh_escrow_room_accept_terms(array $user, string $roomId, bool $work
                 zinesh_ensure_wallet_fields($u);
                 $available = round((float)$u['usdtBalance'] - (float)$u['escrowBalance'], 2);
                 if ($available + 1e-9 < $collateralAmount) {
-                    zinesh_json_response(['message' => 'İş alan teminatı kilitlenemedi.'], 400);
+                    zinesh_wallet_abort('İş alan teminatı kilitlenemedi.');
                 }
                 $u['escrowBalance'] = round((float)$u['escrowBalance'] + $collateralAmount, 2);
             });
@@ -561,11 +922,16 @@ function zinesh_escrow_room_accept_terms(array $user, string $roomId, bool $work
             $rollbackRoom();
             return ['ok' => false, 'message' => 'Teminat kilitlenemedi; anlaşma iptal edildi.'];
         }
+        zinesh_escrow_room_patch_fields($roomId, [
+            'lockingWorkerCollateralFunded' => true,
+            'lockingCollateralTry' => $collateralAmount,
+        ], 'locking');
     }
 
     $updated = null;
     $finalized = zinesh_json_atomic(ZINESH_ESCROW_ROOMS_FILE, static function (array &$rows) use (
         $roomId,
+        $termsProposedBy,
         $workerRequestsCollateral,
         $collateralActive,
         $collateralAmount,
@@ -579,7 +945,10 @@ function zinesh_escrow_room_accept_terms(array $user, string $roomId, bool $work
             if ((string)($row['status'] ?? '') !== 'locking') {
                 return false;
             }
-            $rows[$i]['workerRequestsCollateral'] = $workerRequestsCollateral;
+            $workerCollateralFlag = $termsProposedBy === 'worker'
+                ? !empty($row['workerRequestsCollateral'])
+                : $workerRequestsCollateral;
+            $rows[$i]['workerRequestsCollateral'] = $workerCollateralFlag;
             $rows[$i]['collateralActive'] = $collateralActive;
             $rows[$i]['collateralAmountTry'] = $collateralAmount;
             $rows[$i]['employerLockedTry'] = $amount;
@@ -588,6 +957,12 @@ function zinesh_escrow_room_accept_terms(array $user, string $roomId, bool $work
             $rows[$i]['lockedAt'] = date('c');
             $rows[$i]['employerConfirmedComplete'] = false;
             $rows[$i]['workerConfirmedComplete'] = false;
+            unset(
+                $rows[$i]['lockingAt'],
+                $rows[$i]['lockingEmployerFunded'],
+                $rows[$i]['lockingWorkerCollateralFunded'],
+                $rows[$i]['lockingCollateralTry']
+            );
             $updated = $rows[$i];
             return true;
         }
@@ -615,13 +990,25 @@ function zinesh_escrow_room_accept_terms(array $user, string $roomId, bool $work
     zinesh_escrow_room_add_message(
         $roomId,
         $uid,
-        (string)($user['name'] ?? 'İş alan'),
+        (string)($user['name'] ?? ($termsProposedBy === 'worker' ? 'İşveren' : 'İş alan')),
         sprintf(
             'Anlaşma onaylandı. %s TL işveren hesabında kilitlendi.%s',
             number_format($amount, 0, ',', '.'),
             $collateralMsg
         ),
         'system'
+    );
+    zinesh_audit('escrow_room_terms_accepted', [
+        'roomId' => $roomId,
+        'acceptedBy' => $termsProposedBy === 'worker' ? 'employer' : 'worker',
+        'amountTry' => $amount,
+    ]);
+
+    $lockedForMemory = zinesh_escrow_room_find($roomId) ?? $updated ?? $room;
+    zinesh_escrow_memory_on_terms_accepted(
+        $lockedForMemory,
+        $user,
+        $termsProposedBy === 'worker' ? 'employer' : 'worker'
     );
 
     require_once __DIR__ . '/campaign_lib.php';
@@ -642,6 +1029,250 @@ function zinesh_escrow_room_accept_terms(array $user, string $roomId, bool $work
         'wallet' => zinesh_wallet_state($viewer),
         'message' => 'Anlaşma kilitlendi. İş tamamlanınca iki taraf da onaylamalı.',
     ];
+}
+
+/** @return array{ok:bool,message?:string,room?:array} */
+function zinesh_escrow_room_reject_terms(array $user, string $roomId, string $reason = ''): array
+{
+    $room = zinesh_escrow_room_find($roomId);
+    if (!$room) {
+        return ['ok' => false, 'message' => 'Oda bulunamadı.'];
+    }
+    $uid = (string)($user['uid'] ?? '');
+    if ((string)($room['workerUid'] ?? '') !== $uid) {
+        return ['ok' => false, 'message' => 'Teklifi yalnızca iş alan reddedebilir.'];
+    }
+    if ((string)($room['status'] ?? '') !== 'terms_pending') {
+        return ['ok' => false, 'message' => 'Reddedilecek bekleyen teklif yok.'];
+    }
+    if ((string)($room['termsProposedBy'] ?? 'employer') !== 'employer') {
+        return ['ok' => false, 'message' => 'Karşı teklif aşamasında red yerine işverenle görüşün.'];
+    }
+
+    $reasonTrim = trim($reason);
+    $updated = null;
+    zinesh_json_atomic(ZINESH_ESCROW_ROOMS_FILE, static function (array &$rows) use ($roomId, $reasonTrim, &$updated) {
+        foreach ($rows as $i => $row) {
+            if ((string)($row['id'] ?? '') !== $roomId) {
+                continue;
+            }
+            if ((string)($row['status'] ?? '') !== 'terms_pending') {
+                return false;
+            }
+            $rows[$i]['status'] = 'negotiating';
+            $rows[$i]['agreedAmountTry'] = 0.0;
+            $rows[$i]['termsRejectedAt'] = date('c');
+            unset(
+                $rows[$i]['termsProposedAt'],
+                $rows[$i]['termsChangeRequested'],
+                $rows[$i]['termsChangeNote'],
+                $rows[$i]['employerRequestsCollateral'],
+                $rows[$i]['workerRequestsCollateral']
+            );
+            $updated = $rows[$i];
+            return true;
+        }
+        return false;
+    });
+
+    if (!$updated) {
+        return ['ok' => false, 'message' => 'Teklif reddedilemedi.'];
+    }
+
+    $msg = 'İş alan mevcut sözleşme teklifini reddetti.';
+    if ($reasonTrim !== '') {
+        $msg .= ' Gerekçe: ' . (function_exists('mb_substr') ? mb_substr($reasonTrim, 0, 500) : substr($reasonTrim, 0, 500));
+    }
+    zinesh_escrow_room_add_message($roomId, $uid, (string)($user['name'] ?? 'İş alan'), $msg, 'terms_reject', ['reason' => $reasonTrim]);
+    zinesh_audit('escrow_room_terms_rejected', ['roomId' => $roomId, 'reason' => $reasonTrim]);
+
+    $fresh = zinesh_escrow_room_find($roomId) ?? $updated;
+    zinesh_escrow_memory_on_terms_rejected($fresh, $user, $reasonTrim);
+    zinesh_escrow_room_notify_peer(
+        $fresh,
+        $uid,
+        'ESCROW_TERMS',
+        'Sözleşme teklifi reddedildi',
+        (string)($user['name'] ?? 'İş alan') . ' teklifi reddetti. Yeni teklif gönderebilirsiniz.',
+        ['fromUid' => $uid, 'signalKind' => 'approve']
+    );
+
+    return ['ok' => true, 'room' => zinesh_escrow_room_public($fresh, $uid), 'message' => 'Teklif reddedildi.'];
+}
+
+/** @return array{ok:bool,message?:string,room?:array} */
+function zinesh_escrow_room_request_changes(array $user, string $roomId, string $note): array
+{
+    $room = zinesh_escrow_room_find($roomId);
+    if (!$room) {
+        return ['ok' => false, 'message' => 'Oda bulunamadı.'];
+    }
+    $uid = (string)($user['uid'] ?? '');
+    if ((string)($room['workerUid'] ?? '') !== $uid) {
+        return ['ok' => false, 'message' => 'Değişiklik talebini yalnızca iş alan iletebilir.'];
+    }
+    if ((string)($room['status'] ?? '') !== 'terms_pending') {
+        return ['ok' => false, 'message' => 'Bu aşamada değişiklik talebi verilemez.'];
+    }
+
+    $noteTrim = trim($note);
+    if (mb_strlen($noteTrim) < 10) {
+        return ['ok' => false, 'message' => 'Değişiklik talebi en az 10 karakter olmalı.'];
+    }
+
+    $updated = null;
+    zinesh_json_atomic(ZINESH_ESCROW_ROOMS_FILE, static function (array &$rows) use ($roomId, $noteTrim, &$updated) {
+        foreach ($rows as $i => $row) {
+            if ((string)($row['id'] ?? '') !== $roomId) {
+                continue;
+            }
+            if ((string)($row['status'] ?? '') !== 'terms_pending') {
+                return false;
+            }
+            $rows[$i]['status'] = 'negotiating';
+            $rows[$i]['termsChangeRequested'] = true;
+            $rows[$i]['termsChangeNote'] = function_exists('mb_substr') ? mb_substr($noteTrim, 0, 2000) : substr($noteTrim, 0, 2000);
+            $rows[$i]['agreedAmountTry'] = 0.0;
+            unset($rows[$i]['termsProposedAt'], $rows[$i]['employerRequestsCollateral']);
+            $updated = $rows[$i];
+            return true;
+        }
+        return false;
+    });
+
+    if (!$updated) {
+        return ['ok' => false, 'message' => 'Talep kaydedilemedi.'];
+    }
+
+    zinesh_escrow_room_add_message(
+        $roomId,
+        $uid,
+        (string)($user['name'] ?? 'İş alan'),
+        'Değişiklik talebi: ' . (function_exists('mb_substr') ? mb_substr($noteTrim, 0, 500) : substr($noteTrim, 0, 500)),
+        'terms_change_request',
+        ['note' => $noteTrim]
+    );
+    zinesh_audit('escrow_room_terms_change_requested', ['roomId' => $roomId]);
+
+    $fresh = zinesh_escrow_room_find($roomId) ?? $updated;
+    zinesh_escrow_memory_on_changes_requested($fresh, $user, $noteTrim);
+    zinesh_escrow_room_notify_peer(
+        $fresh,
+        $uid,
+        'ESCROW_TERMS',
+        'Sözleşme değişiklik talebi',
+        (string)($user['name'] ?? 'İş alan') . ' sözleşmede değişiklik istiyor.',
+        ['fromUid' => $uid, 'signalKind' => 'approve']
+    );
+
+    return ['ok' => true, 'room' => zinesh_escrow_room_public($fresh, $uid), 'message' => 'Değişiklik talebi iletildi.'];
+}
+
+/** @return array{ok:bool,message?:string,room?:array} */
+function zinesh_escrow_room_counter_offer(
+    array $user,
+    string $roomId,
+    float $amountTry,
+    string $title,
+    string $description,
+    bool $requestCollateral
+): array {
+    $gate = zinesh_escrow_contract_verification_gate($user);
+    if (!$gate['ok']) {
+        return $gate;
+    }
+
+    $room = zinesh_escrow_room_find($roomId);
+    if (!$room) {
+        return ['ok' => false, 'message' => 'Oda bulunamadı.'];
+    }
+    $uid = (string)($user['uid'] ?? '');
+    if ((string)($room['workerUid'] ?? '') !== $uid) {
+        return ['ok' => false, 'message' => 'Karşı teklifi yalnızca iş alan gönderebilir.'];
+    }
+    if (!in_array((string)($room['status'] ?? ''), ['negotiating', 'terms_pending'], true)) {
+        return ['ok' => false, 'message' => 'Bu aşamada karşı teklif verilemez.'];
+    }
+    if ($amountTry < 1) {
+        return ['ok' => false, 'message' => 'Geçerli bir tutar girin.'];
+    }
+    $title = trim($title);
+    if ($title === '') {
+        return ['ok' => false, 'message' => 'İş başlığı gerekli.'];
+    }
+    $description = trim($description);
+    if (mb_strlen($description) < 40) {
+        return ['ok' => false, 'message' => 'Sözleşme metni en az 40 karakter olmalı.'];
+    }
+
+    $updated = null;
+    zinesh_json_atomic(ZINESH_ESCROW_ROOMS_FILE, static function (array &$rows) use (
+        $roomId,
+        $amountTry,
+        $title,
+        $description,
+        $requestCollateral,
+        &$updated
+    ) {
+        foreach ($rows as $i => $row) {
+            if ((string)($row['id'] ?? '') !== $roomId) {
+                continue;
+            }
+            if (!in_array((string)($row['status'] ?? ''), ['negotiating', 'terms_pending'], true)) {
+                return false;
+            }
+            $rows[$i]['agreedAmountTry'] = round($amountTry, 2);
+            $rows[$i]['title'] = $title;
+            $rows[$i]['description'] = $description;
+            $rows[$i]['workerRequestsCollateral'] = $requestCollateral;
+            $rows[$i]['employerRequestsCollateral'] = false;
+            $rows[$i]['status'] = 'terms_pending';
+            $rows[$i]['termsProposedAt'] = date('c');
+            $rows[$i]['termsProposedBy'] = 'worker';
+            unset($rows[$i]['termsChangeRequested'], $rows[$i]['termsChangeNote'], $rows[$i]['termsRejectedAt']);
+            $updated = $rows[$i];
+            return true;
+        }
+        return false;
+    });
+
+    if (!$updated) {
+        return ['ok' => false, 'message' => 'Karşı teklif kaydedilemedi.'];
+    }
+
+    zinesh_escrow_room_add_message(
+        $roomId,
+        $uid,
+        (string)($user['name'] ?? 'İş alan'),
+        sprintf(
+            'Karşı teklif: %s TL — %s. Metin: %s',
+            number_format($amountTry, 0, ',', '.'),
+            $title,
+            mb_strlen($description) > 160 ? (mb_substr($description, 0, 160) . '…') : $description
+        ),
+        'terms_counter',
+        ['amountTry' => $amountTry, 'requestCollateral' => $requestCollateral, 'proposedBy' => 'worker']
+    );
+    zinesh_audit('escrow_room_terms_counter', ['roomId' => $roomId, 'amountTry' => $amountTry]);
+
+    $freshForMemory = zinesh_escrow_room_find($roomId) ?? $updated;
+    zinesh_escrow_memory_on_terms_version($freshForMemory, $user, 'worker', 'counter_offer', ['reason' => 'counter_offer']);
+
+    $fresh = zinesh_escrow_room_find($roomId) ?? $updated;
+    zinesh_escrow_room_notify_peer(
+        $fresh,
+        $uid,
+        'ESCROW_LOCK',
+        'Karşı teklif geldi',
+        sprintf(
+            '%s %s TL tutarında karşı teklif gönderdi.',
+            (string)($user['name'] ?? 'İş alan'),
+            number_format($amountTry, 0, ',', '.')
+        ),
+        ['fromUid' => $uid, 'actions' => ['Onayla', 'İncele'], 'signalKind' => 'lock']
+    );
+
+    return ['ok' => true, 'room' => zinesh_escrow_room_public($fresh, $uid), 'message' => 'Karşı teklif gönderildi.'];
 }
 
 /** @return array{ok:bool,message?:string,room?:array,wallet?:array} */
@@ -715,6 +1346,7 @@ function zinesh_escrow_room_confirm_complete(array $user, string $roomId): array
 
     if ($shouldFinalize) {
         zinesh_eslesme_sinyal_eylem_tamamla($roomId, 'is_tamamlandi');
+        zinesh_escrow_memory_on_release_requested($updated, $user, (string)$role);
         return zinesh_escrow_room_finalize_success($roomId, $uid);
     }
 
@@ -763,7 +1395,26 @@ function zinesh_escrow_room_finalize_success(string $roomId, ?string $viewerUid 
         ];
     }
     if ($status === 'settling') {
-        return ['ok' => false, 'message' => 'Ödeme işleniyor. Lütfen birkaç saniye sonra tekrar deneyin.'];
+        if (!zinesh_escrow_room_transient_expired((string)($room['settlingAt'] ?? ''))) {
+            return ['ok' => false, 'message' => 'Ödeme işleniyor. Lütfen birkaç saniye sonra tekrar deneyin.'];
+        }
+        zinesh_escrow_room_recover_stale_transient_if_needed($roomId);
+        $room = zinesh_escrow_room_find($roomId);
+        if (!$room) {
+            return ['ok' => false, 'message' => 'Oda bulunamadı.'];
+        }
+        $status = (string)($room['status'] ?? '');
+        if ($status === 'completed') {
+            $viewerUid = $viewerUid ?? (string)($room['employerUid'] ?? '');
+            $viewer = zinesh_find_user_by_uid($viewerUid);
+            return [
+                'ok' => true,
+                'room' => zinesh_escrow_room_public($room, $viewerUid),
+                'wallet' => $viewer ? zinesh_wallet_state($viewer) : null,
+                'message' => 'İş zaten tamamlanmış.',
+            ];
+        }
+        return ['ok' => false, 'message' => 'Ödeme işlenemedi. Tamamlama onayını tekrar deneyin.'];
     }
     if (!in_array($status, ['locked', 'completion_pending'], true)) {
         return ['ok' => false, 'message' => 'Bu aşamada ödeme serbest bırakılamaz.'];
@@ -781,8 +1432,18 @@ function zinesh_escrow_room_finalize_success(string $roomId, ?string $viewerUid 
     $employerUsdtBefore = $employerBefore
         ? round((float)($employerBefore['usdtBalance'] ?? 0), 2)
         : null;
+    $employerEscrowBefore = $employerBefore
+        ? round((float)($employerBefore['escrowBalance'] ?? 0), 2)
+        : null;
 
-    $settlingClaimed = zinesh_json_atomic(ZINESH_ESCROW_ROOMS_FILE, static function (array &$rows) use ($roomId, $previousStatus) {
+    $settlingClaimed = zinesh_json_atomic(ZINESH_ESCROW_ROOMS_FILE, static function (array &$rows) use (
+        $roomId,
+        $previousStatus,
+        $amount,
+        $employerEscrowBefore,
+        $employerUsdtBefore,
+        $employerUid
+    ) {
         foreach ($rows as $i => $row) {
             if ((string)($row['id'] ?? '') !== $roomId) {
                 continue;
@@ -797,12 +1458,37 @@ function zinesh_escrow_room_finalize_success(string $roomId, ?string $viewerUid 
             if ($current !== $previousStatus) {
                 return false;
             }
+            if ($employerUid !== '') {
+                foreach ($rows as $other) {
+                    if ((string)($other['id'] ?? '') === $roomId) {
+                        continue;
+                    }
+                    if ((string)($other['employerUid'] ?? '') !== $employerUid) {
+                        continue;
+                    }
+                    if ((string)($other['status'] ?? '') === 'settling') {
+                        return false;
+                    }
+                }
+            }
             $rows[$i]['status'] = 'settling';
             $rows[$i]['settlingAt'] = date('c');
+            $rows[$i]['settlingPreviousStatus'] = $current;
+            if ($employerEscrowBefore !== null && $employerUsdtBefore !== null) {
+                $rows[$i]['settlingSnapshotEmployerEscrow'] = $employerEscrowBefore;
+                $rows[$i]['settlingSnapshotEmployerUsdt'] = $employerUsdtBefore;
+                $rows[$i]['settlingSnapshotLockTry'] = $amount;
+            }
+            unset($rows[$i]['settlingWalletApplied']);
             return true;
         }
         return false;
     });
+
+    if ($settlingClaimed) {
+        $settlingRoom = zinesh_escrow_room_find($roomId) ?? $room;
+        zinesh_escrow_memory_on_settlement_started($settlingRoom);
+    }
 
     if (!$settlingClaimed) {
         $fresh = zinesh_escrow_room_find($roomId);
@@ -823,6 +1509,7 @@ function zinesh_escrow_room_finalize_success(string $roomId, ?string $viewerUid 
     try {
         zinesh_wallet_apply_tl_escrow_settlement($employerUid, $workerUid, $amount, $payout, $collateral);
         $walletSettled = true;
+        zinesh_escrow_room_patch_fields($roomId, ['settlingWalletApplied' => true], 'settling');
 
         $employerAfter = zinesh_find_user_by_uid($employerUid);
         if ($employerAfter === null) {
@@ -860,7 +1547,14 @@ function zinesh_escrow_room_finalize_success(string $roomId, ?string $viewerUid 
                 $rows[$i]['commissionTry'] = $commission;
                 $rows[$i]['payoutTry'] = $payout;
                 $rows[$i]['employerUsdtDebited'] = true;
-                unset($rows[$i]['settlingAt']);
+                unset(
+                    $rows[$i]['settlingAt'],
+                    $rows[$i]['settlingPreviousStatus'],
+                    $rows[$i]['settlingWalletApplied'],
+                    $rows[$i]['settlingSnapshotEmployerEscrow'],
+                    $rows[$i]['settlingSnapshotEmployerUsdt'],
+                    $rows[$i]['settlingSnapshotLockTry']
+                );
                 return true;
             }
             return false;
@@ -877,7 +1571,14 @@ function zinesh_escrow_room_finalize_success(string $roomId, ?string $viewerUid 
                     $rows[$i]['commissionTry'] = $commission;
                     $rows[$i]['payoutTry'] = $payout;
                     $rows[$i]['employerUsdtDebited'] = true;
-                    unset($rows[$i]['settlingAt']);
+                    unset(
+                        $rows[$i]['settlingAt'],
+                        $rows[$i]['settlingPreviousStatus'],
+                        $rows[$i]['settlingWalletApplied'],
+                        $rows[$i]['settlingSnapshotEmployerEscrow'],
+                        $rows[$i]['settlingSnapshotEmployerUsdt'],
+                        $rows[$i]['settlingSnapshotLockTry']
+                    );
                     return true;
                 }
                 return false;
@@ -893,7 +1594,14 @@ function zinesh_escrow_room_finalize_success(string $roomId, ?string $viewerUid 
                     }
                     if ((string)($row['status'] ?? '') === 'settling') {
                         $rows[$i]['status'] = $previousStatus;
-                        unset($rows[$i]['settlingAt']);
+                        unset(
+                            $rows[$i]['settlingAt'],
+                            $rows[$i]['settlingPreviousStatus'],
+                            $rows[$i]['settlingWalletApplied'],
+                            $rows[$i]['settlingSnapshotEmployerEscrow'],
+                            $rows[$i]['settlingSnapshotEmployerUsdt'],
+                            $rows[$i]['settlingSnapshotLockTry']
+                        );
                     }
                     return true;
                 }
@@ -902,6 +1610,7 @@ function zinesh_escrow_room_finalize_success(string $roomId, ?string $viewerUid 
         } else {
             zinesh_audit('escrow_room_settlement_partial', ['roomId' => $roomId, 'error' => $e->getMessage()]);
         }
+        zinesh_escrow_memory_on_settlement_failed($roomId, $e->getMessage());
         return ['ok' => false, 'message' => 'Ödeme işlenemedi: ' . $e->getMessage()];
     }
 
@@ -916,6 +1625,13 @@ function zinesh_escrow_room_finalize_success(string $roomId, ?string $viewerUid 
         ),
         'system'
     );
+
+    $completedRoom = zinesh_escrow_room_find($roomId);
+    if ($completedRoom) {
+        $completedRoom['payoutTry'] = $payout;
+        $completedRoom['commissionTry'] = $commission;
+        zinesh_escrow_memory_on_settlement_completed($completedRoom);
+    }
 
     zinesh_eslesme_sinyal_eylem_tamamla($roomId, 'is_tamamlandi');
     $freshForSignal = zinesh_escrow_room_find($roomId) ?? $room;
@@ -940,6 +1656,144 @@ function zinesh_escrow_room_finalize_success(string $roomId, ?string $viewerUid 
     ];
 }
 
+/** İtiraz depozitosu: anapara üzerinden %1 */
+function zinesh_escrow_dispute_deposit_amount(float $principalTry): float
+{
+    return round(max(0.0, $principalTry) * ZINESH_ESCROW_DISPUTE_FEE_RATE, 2);
+}
+
+/**
+ * İtiraz açanın depozitosunu tahsil eder (treasury'ye gitmez — çözümde dağıtılır).
+ *
+ * @return array{ok:bool,source?:string,message?:string}
+ */
+function zinesh_escrow_dispute_collect_filer_deposit(array $room, string $filerUid, float $deposit): array
+{
+    if ($deposit <= 1e-9) {
+        return ['ok' => true, 'source' => 'none'];
+    }
+
+    $employerUid = (string)($room['employerUid'] ?? '');
+    $workerUid = (string)($room['workerUid'] ?? '');
+    $principal = round((float)($room['employerLockedTry'] ?? 0), 2);
+    $collateral = round((float)($room['workerLockedTry'] ?? 0), 2);
+
+    if ($filerUid === $employerUid) {
+        if ($principal + 1e-9 < $deposit) {
+            return ['ok' => false, 'message' => 'Şikayet depozitosu için yeterli kilitli tutar yok.'];
+        }
+        return ['ok' => true, 'source' => 'employer_locked'];
+    }
+
+    if ($filerUid !== $workerUid) {
+        return ['ok' => false, 'message' => 'Geçersiz itiraz eden.'];
+    }
+
+    $worker = zinesh_find_user_by_uid($workerUid);
+    if (!$worker) {
+        return ['ok' => false, 'message' => 'İş alan hesabı bulunamadı.'];
+    }
+    zinesh_ensure_wallet_fields($worker);
+    $available = round((float)$worker['usdtBalance'] - (float)$worker['escrowBalance'], 2);
+    if ($available + 1e-9 >= $deposit) {
+        try {
+            zinesh_update_user($workerUid, static function (array &$u) use ($deposit) {
+                zinesh_ensure_wallet_fields($u);
+                $avail = round((float)$u['usdtBalance'] - (float)$u['escrowBalance'], 2);
+                if ($avail + 1e-9 < $deposit) {
+                    zinesh_json_response(['message' => 'Şikayet depozitosu için yeterli bakiye yok.'], 400);
+                }
+                $u['escrowBalance'] = round((float)$u['escrowBalance'] + $deposit, 2);
+            });
+            return ['ok' => true, 'source' => 'worker_balance'];
+        } catch (Throwable $e) {
+            return ['ok' => false, 'message' => 'Şikayet depozitosu tahsil edilemedi.'];
+        }
+    }
+
+    if ($collateral + 1e-9 >= $deposit) {
+        return ['ok' => true, 'source' => 'worker_collateral'];
+    }
+
+    return [
+        'ok' => false,
+        'message' => sprintf(
+            'Şikayet depozitosu için en az %s TL bakiye veya teminat gerekir.',
+            number_format($deposit, 2, ',', '.')
+        ),
+    ];
+}
+
+/** İtiraz depozitosu tahsilini geri al (oda kaydı başarısız olursa). */
+function zinesh_escrow_dispute_refund_filer_deposit(array $room, string $filerUid, float $deposit, string $source): void
+{
+    if ($deposit <= 1e-9 || $source === 'none' || $source === 'employer_locked' || $source === 'worker_collateral') {
+        return;
+    }
+    if ($source === 'worker_balance' && $filerUid !== '') {
+        zinesh_update_user($filerUid, static function (array &$u) use ($deposit) {
+            zinesh_ensure_wallet_fields($u);
+            $u['escrowBalance'] = round(max(0, (float)$u['escrowBalance'] - $deposit), 2);
+        });
+    }
+}
+
+/**
+ * Haklı tarafa itiraz depozitosu iadesi / haksıza aktarım.
+ *
+ * @return array{employerBonus:float,workerBonus:float,disposition:string}
+ */
+function zinesh_escrow_dispute_deposit_disposition(
+    string $fault,
+    string $filerUid,
+    string $employerUid,
+    string $workerUid,
+    float $deposit
+): array {
+    if ($deposit <= 1e-9) {
+        return ['employerBonus' => 0.0, 'workerBonus' => 0.0, 'disposition' => 'none'];
+    }
+
+    $filerIsEmployer = $filerUid === $employerUid;
+    $filerIsWorker = $filerUid === $workerUid;
+
+    if ($fault === 'none') {
+        if ($filerIsEmployer) {
+            return ['employerBonus' => $deposit, 'workerBonus' => 0.0, 'disposition' => 'refund_filer'];
+        }
+        if ($filerIsWorker) {
+            return ['employerBonus' => 0.0, 'workerBonus' => $deposit, 'disposition' => 'refund_filer'];
+        }
+    }
+
+    if ($fault === 'worker' && $filerIsEmployer) {
+        return ['employerBonus' => $deposit, 'workerBonus' => 0.0, 'disposition' => 'refund_filer'];
+    }
+    if ($fault === 'employer' && $filerIsWorker) {
+        return ['employerBonus' => 0.0, 'workerBonus' => $deposit, 'disposition' => 'refund_filer'];
+    }
+
+    if ($fault === 'split') {
+        $half = round($deposit / 2, 2);
+        $other = round($deposit - $half, 2);
+        if ($filerIsEmployer) {
+            return ['employerBonus' => $half, 'workerBonus' => $other, 'disposition' => 'split'];
+        }
+        if ($filerIsWorker) {
+            return ['employerBonus' => $other, 'workerBonus' => $half, 'disposition' => 'split'];
+        }
+    }
+
+    if ($fault === 'worker' && $filerIsWorker) {
+        return ['employerBonus' => $deposit, 'workerBonus' => 0.0, 'disposition' => 'forfeit_to_peer'];
+    }
+    if ($fault === 'employer' && $filerIsEmployer) {
+        return ['employerBonus' => 0.0, 'workerBonus' => $deposit, 'disposition' => 'forfeit_to_peer'];
+    }
+
+    return ['employerBonus' => 0.0, 'workerBonus' => 0.0, 'disposition' => 'protocol'];
+}
+
 /** @return array{ok:bool,message?:string,room?:array} */
 function zinesh_escrow_room_file_dispute(array $user, string $roomId, string $reason, string $evidence = ''): array
 {
@@ -951,32 +1805,44 @@ function zinesh_escrow_room_file_dispute(array $user, string $roomId, string $re
     if (!zinesh_escrow_room_is_participant($room, $uid)) {
         return ['ok' => false, 'message' => 'Bu odaya erişimin yok.'];
     }
+
+    if ((string)($room['status'] ?? '') === 'disputed') {
+        $existing = is_array($room['dispute'] ?? null) ? $room['dispute'] : [];
+        if ((string)($existing['status'] ?? '') === 'open') {
+            return [
+                'ok' => true,
+                'room' => zinesh_escrow_room_public($room, $uid),
+                'message' => 'Şikayet zaten açık.',
+            ];
+        }
+    }
+
     if (!in_array((string)($room['status'] ?? ''), ['locked', 'completion_pending'], true)) {
         return ['ok' => false, 'message' => 'Şikayet yalnızca kilitli işlerde açılabilir.'];
     }
 
-    $amount = round((float)($room['employerLockedTry'] ?? $room['agreedAmountTry'] ?? 0), 2);
-    $disputeFee = round($amount * ZINESH_ESCROW_DISPUTE_FEE_RATE, 2);
+    $principal = round((float)($room['employerLockedTry'] ?? $room['agreedAmountTry'] ?? 0), 2);
+    $deposit = zinesh_escrow_dispute_deposit_amount($principal);
     $employerUid = (string)($room['employerUid'] ?? '');
+    $workerUid = (string)($room['workerUid'] ?? '');
 
-    if ($disputeFee > 0 && $employerUid !== '') {
-        try {
-            zinesh_update_user($employerUid, static function (array &$u) use ($disputeFee) {
-                zinesh_ensure_wallet_fields($u);
-                if ((float)$u['escrowBalance'] + 1e-9 < $disputeFee) {
-                    zinesh_json_response(['message' => 'Şikayet ücreti için yeterli kilitli bakiye yok.'], 400);
-                }
-                $u['escrowBalance'] = round((float)$u['escrowBalance'] - $disputeFee, 2);
-                $u['usdtBalance'] = round((float)$u['usdtBalance'] - $disputeFee, 2);
-            });
-            zinesh_add_treasury_fee('protocol_commission_tl', $disputeFee);
-        } catch (Throwable $e) {
-            return ['ok' => false, 'message' => 'Şikayet ücreti tahsil edilemedi.'];
-        }
+    $collect = zinesh_escrow_dispute_collect_filer_deposit($room, $uid, $deposit);
+    if (!$collect['ok']) {
+        return ['ok' => false, 'message' => $collect['message'] ?? 'Şikayet depozitosu tahsil edilemedi.'];
     }
+    $depositSource = (string)($collect['source'] ?? 'none');
 
     $updated = null;
-    zinesh_json_atomic(ZINESH_ESCROW_ROOMS_FILE, static function (array &$rows) use ($roomId, $uid, $reason, $evidence, $disputeFee, $amount, &$updated) {
+    zinesh_json_atomic(ZINESH_ESCROW_ROOMS_FILE, static function (array &$rows) use (
+        $roomId,
+        $uid,
+        $reason,
+        $evidence,
+        $deposit,
+        $depositSource,
+        $principal,
+        &$updated
+    ) {
         foreach ($rows as $i => $row) {
             if ((string)($row['id'] ?? '') !== $roomId) {
                 continue;
@@ -984,13 +1850,35 @@ function zinesh_escrow_room_file_dispute(array $user, string $roomId, string $re
             if (!in_array((string)($row['status'] ?? ''), ['locked', 'completion_pending'], true)) {
                 return false;
             }
-            $rows[$i]['status'] = 'disputed';
-            $rows[$i]['disputeFeeTry'] = $disputeFee;
-            $rows[$i]['employerLockedTry'] = round(max(0, $amount - $disputeFee), 2);
+            $lockedPrincipal = round((float)($row['employerLockedTry'] ?? 0), 2);
+            $workerCollateral = round((float)($row['workerLockedTry'] ?? 0), 2);
+
+            if ($depositSource === 'employer_locked' && $lockedPrincipal + 1e-9 < $deposit) {
+                return false;
+            }
+            if ($depositSource === 'worker_collateral' && $workerCollateral + 1e-9 < $deposit) {
+                return false;
+            }
+
             $reasonTrim = trim($reason);
             $evidenceTrim = trim($evidence);
+            $rows[$i]['status'] = 'disputed';
+            $rows[$i]['disputeDepositTry'] = $deposit;
+            $rows[$i]['disputeFeeTry'] = $deposit;
+            $rows[$i]['disputeDepositPaidByUid'] = $uid;
+            $rows[$i]['disputeDepositSource'] = $depositSource;
+
+            if ($depositSource === 'employer_locked') {
+                $rows[$i]['employerLockedTry'] = round(max(0, $lockedPrincipal - $deposit), 2);
+            } elseif ($depositSource === 'worker_collateral') {
+                $rows[$i]['workerLockedTry'] = round(max(0, $workerCollateral - $deposit), 2);
+            }
+
             $rows[$i]['dispute'] = [
                 'filedByUid' => $uid,
+                'feePaidByUid' => $uid,
+                'depositTry' => $deposit,
+                'depositSource' => $depositSource,
                 'reason' => function_exists('mb_substr') ? mb_substr($reasonTrim, 0, 2000) : substr($reasonTrim, 0, 2000),
                 'evidence' => function_exists('mb_substr') ? mb_substr($evidenceTrim, 0, 4000) : substr($evidenceTrim, 0, 4000),
                 'filedAt' => date('c'),
@@ -1003,30 +1891,35 @@ function zinesh_escrow_room_file_dispute(array $user, string $roomId, string $re
     });
 
     if (!$updated) {
-        if ($disputeFee > 0 && $employerUid !== '') {
-            zinesh_update_user($employerUid, static function (array &$u) use ($disputeFee) {
-                zinesh_ensure_wallet_fields($u);
-                $u['escrowBalance'] = round((float)$u['escrowBalance'] + $disputeFee, 2);
-                $u['usdtBalance'] = round((float)$u['usdtBalance'] + $disputeFee, 2);
-            });
-        }
+        zinesh_escrow_dispute_refund_filer_deposit($room, $uid, $deposit, $depositSource);
         return ['ok' => false, 'message' => 'Şikayet kaydedilemedi.'];
     }
 
+    $filerRole = $uid === $employerUid ? 'işveren' : 'iş alan';
     zinesh_escrow_room_add_message(
         $roomId,
         $uid,
         (string)($user['name'] ?? 'Üye'),
-        sprintf('Şikayet açıldı. Hizmet bedeli: %s TL (%%1). İnceleme bekleniyor.', number_format($disputeFee, 2, ',', '.')),
+        sprintf(
+            'Şikayet açıldı (%s depozito: %s TL, %%1). İnceleme bekleniyor. Haklı çıkana depozito iade edilir.',
+            $filerRole,
+            number_format($deposit, 2, ',', '.')
+        ),
         'system'
     );
+    zinesh_audit('escrow_room_dispute_filed', [
+        'roomId' => $roomId,
+        'filedByUid' => $uid,
+        'depositTry' => $deposit,
+        'depositSource' => $depositSource,
+    ]);
+    zinesh_escrow_memory_on_dispute_opened($updated, $user, $deposit, $depositSource);
 
-    // hakem_cagirildi → her iki tarafa
-    zinesh_eslesme_sinyal_oda_taraflarina($updated ?? $room, 'hakem_cagirildi', $uid);
+    zinesh_eslesme_sinyal_oda_taraflarina($updated, 'hakem_cagirildi', $uid);
 
     return [
         'ok' => true,
-        'room' => zinesh_escrow_room_public($updated ?? $room, $uid),
+        'room' => zinesh_escrow_room_public($updated, $uid),
         'message' => 'Şikayetin alındı. Yetkililer inceleyecek.',
     ];
 }
@@ -1044,11 +1937,24 @@ function zinesh_escrow_room_resolve_dispute(string $roomId, string $fault, strin
         return ['ok' => false, 'message' => 'Açık şikayet bulunamadı.'];
     }
 
+    $dispute = is_array($room['dispute'] ?? null) ? $room['dispute'] : [];
+    if ((string)($dispute['status'] ?? '') === 'resolved') {
+        return ['ok' => true, 'message' => 'Şikayet zaten sonuçlandırılmış.'];
+    }
+
     $amount = round((float)($room['employerLockedTry'] ?? 0), 2);
     $collateral = round((float)($room['workerLockedTry'] ?? 0), 2);
-    $disputeFee = round((float)($room['disputeFeeTry'] ?? 0), 2);
+    $deposit = round((float)($room['disputeDepositTry'] ?? $room['disputeFeeTry'] ?? 0), 2);
+    $depositSource = (string)($room['disputeDepositSource'] ?? $dispute['depositSource'] ?? '');
+    $filerUid = (string)($room['disputeDepositPaidByUid'] ?? $dispute['feePaidByUid'] ?? $dispute['filedByUid'] ?? '');
+    $employerEscrowRelease = $depositSource === 'employer_locked' ? round($amount + $deposit, 2) : $amount;
+    $workerEscrowRelease = $collateral;
+    if ($depositSource === 'worker_collateral') {
+        $workerEscrowRelease = round($collateral + $deposit, 2);
+    } elseif ($depositSource === 'worker_balance') {
+        $workerEscrowRelease = round($collateral + $deposit, 2);
+    }
     $commission = round($amount * ZINESH_ESCROW_COMMISSION_RATE, 2);
-    $totalFees = round($disputeFee + $commission, 2);
 
     $employerUid = (string)($room['employerUid'] ?? '');
     $workerUid = (string)($room['workerUid'] ?? '');
@@ -1060,27 +1966,28 @@ function zinesh_escrow_room_resolve_dispute(string $roomId, string $fault, strin
     $workerPayout = 0.0;
     $employerRefund = 0.0;
     if ($fault === 'worker') {
-        $workerPayout = 0.0;
-        $employerRefund = max(0, $amount - $totalFees);
+        $employerRefund = max(0, $amount - $commission);
         zinesh_apply_trust_fault_penalty($workerUid, ZINESH_ESCROW_TRUST_PENALTY);
     } elseif ($fault === 'employer') {
-        $workerPayout = max(0, $amount - $totalFees);
-        $employerRefund = 0.0;
+        $workerPayout = max(0, $amount - $commission);
         zinesh_apply_trust_fault_penalty($employerUid, ZINESH_ESCROW_TRUST_PENALTY);
     } elseif ($fault === 'split') {
-        $net = max(0, $amount - $totalFees);
+        $net = max(0, $amount - $commission);
         $workerPayout = round($net / 2, 2);
         $employerRefund = round($net - $workerPayout, 2);
     } else {
-        $workerPayout = max(0, $amount - $totalFees);
-        $employerRefund = 0.0;
+        $workerPayout = max(0, $amount - $commission);
     }
+
+    $depositDisposition = zinesh_escrow_dispute_deposit_disposition($fault, $filerUid, $employerUid, $workerUid, $deposit);
+    $employerRefund = round($employerRefund + $depositDisposition['employerBonus'], 2);
+    $workerPayout = round($workerPayout + $depositDisposition['workerBonus'], 2);
 
     zinesh_json_atomic('users.json', static function (array &$users) use (
         $employerUid,
         $workerUid,
-        $amount,
-        $collateral,
+        $employerEscrowRelease,
+        $workerEscrowRelease,
         $workerPayout,
         $employerRefund
     ) {
@@ -1098,19 +2005,19 @@ function zinesh_escrow_room_resolve_dispute(string $roomId, string $fault, strin
         }
         zinesh_ensure_wallet_fields($users[$employerIdx]);
         zinesh_ensure_wallet_fields($users[$workerIdx]);
-        if ((float)$users[$employerIdx]['escrowBalance'] + 1e-9 < $amount) {
+        if ((float)$users[$employerIdx]['escrowBalance'] + 1e-9 < $employerEscrowRelease) {
             zinesh_json_response(['message' => 'Kilitli tutar yetersiz.'], 400);
         }
-        $employerDebit = round(max(0, $amount - $employerRefund), 2);
-        $users[$employerIdx]['escrowBalance'] = round((float)$users[$employerIdx]['escrowBalance'] - $amount, 2);
+        $employerDebit = round(max(0, $employerEscrowRelease - $employerRefund), 2);
+        $users[$employerIdx]['escrowBalance'] = round((float)$users[$employerIdx]['escrowBalance'] - $employerEscrowRelease, 2);
         if ($employerDebit > 0) {
             $users[$employerIdx]['usdtBalance'] = round((float)$users[$employerIdx]['usdtBalance'] - $employerDebit, 2);
         }
         if ($workerPayout > 0) {
             $users[$workerIdx]['usdtBalance'] = round((float)$users[$workerIdx]['usdtBalance'] + $workerPayout, 2);
         }
-        if ($collateral > 0 && (float)$users[$workerIdx]['escrowBalance'] + 1e-9 >= $collateral) {
-            $users[$workerIdx]['escrowBalance'] = round((float)$users[$workerIdx]['escrowBalance'] - $collateral, 2);
+        if ($workerEscrowRelease > 0 && (float)$users[$workerIdx]['escrowBalance'] + 1e-9 >= $workerEscrowRelease) {
+            $users[$workerIdx]['escrowBalance'] = round((float)$users[$workerIdx]['escrowBalance'] - $workerEscrowRelease, 2);
         }
         return true;
     });
@@ -1119,26 +2026,59 @@ function zinesh_escrow_room_resolve_dispute(string $roomId, string $fault, strin
         zinesh_distribute_commission($commission, 'escrow_dispute', 'TL');
     }
 
-    zinesh_json_atomic(ZINESH_ESCROW_ROOMS_FILE, static function (array &$rows) use ($roomId, $fault, $adminNote, $totalFees, $workerPayout, $employerRefund) {
+    $forfeitToProtocol = $depositDisposition['disposition'] === 'protocol' ? $deposit : 0.0;
+    if ($forfeitToProtocol > 1e-9) {
+        zinesh_add_treasury_fee('protocol_commission_tl', $forfeitToProtocol);
+    }
+
+    zinesh_json_atomic(ZINESH_ESCROW_ROOMS_FILE, static function (array &$rows) use (
+        $roomId,
+        $fault,
+        $adminNote,
+        $commission,
+        $deposit,
+        $depositDisposition,
+        $workerPayout,
+        $employerRefund
+    ) {
         foreach ($rows as $i => $row) {
             if ((string)($row['id'] ?? '') !== $roomId) {
                 continue;
             }
             $rows[$i]['status'] = 'resolved';
             $rows[$i]['completedAt'] = date('c');
-            $dispute = is_array($row['dispute'] ?? null) ? $row['dispute'] : [];
-            $dispute['status'] = 'resolved';
-            $dispute['fault'] = $fault;
-            $dispute['adminNote'] = mb_substr(trim($adminNote), 0, 2000);
-            $dispute['resolvedAt'] = date('c');
-            $dispute['totalFeesTry'] = $totalFees;
-            $dispute['workerPayoutTry'] = $workerPayout;
-            $dispute['employerRefundTry'] = $employerRefund;
-            $rows[$i]['dispute'] = $dispute;
+            $disputeRow = is_array($row['dispute'] ?? null) ? $row['dispute'] : [];
+            $disputeRow['status'] = 'resolved';
+            $disputeRow['fault'] = $fault;
+            $disputeRow['adminNote'] = mb_substr(trim($adminNote), 0, 2000);
+            $disputeRow['resolvedAt'] = date('c');
+            $disputeRow['commissionTry'] = $commission;
+            $disputeRow['depositDisposition'] = $depositDisposition['disposition'];
+            $disputeRow['depositTry'] = $deposit;
+            $disputeRow['workerPayoutTry'] = $workerPayout;
+            $disputeRow['employerRefundTry'] = $employerRefund;
+            $rows[$i]['dispute'] = $disputeRow;
             return true;
         }
         return false;
     });
+
+    zinesh_audit('escrow_room_dispute_resolved', [
+        'roomId' => $roomId,
+        'fault' => $fault,
+        'depositDisposition' => $depositDisposition['disposition'],
+        'depositTry' => $deposit,
+    ]);
+
+    $resolvedRoom = zinesh_escrow_room_find($roomId);
+    if ($resolvedRoom) {
+        zinesh_escrow_memory_on_dispute_resolved(
+            $resolvedRoom,
+            $fault,
+            $depositDisposition['disposition'],
+            $deposit
+        );
+    }
 
     if ($employerUid !== '') {
         zinesh_recalc_trust_score($employerUid);

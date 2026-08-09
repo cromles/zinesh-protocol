@@ -7,8 +7,14 @@ from pathlib import Path
 
 import paramiko
 
+from deploy_common import (
+    USER,
+    require_deploy_host,
+    require_deploy_pass,
+    require_intelligence_regression_pass,
+)
+
 HOST = require_deploy_host()
-USER = os.environ.get("ZINESH_DEPLOY_USER", "root")
 PASSWORD = require_deploy_pass()
 REMOTE_ROOT = os.environ.get("ZINESH_APP_ROOT", "/www/wwwroot/app.zinesh.com")
 LOCAL_DIST = Path(__file__).resolve().parents[1] / "dist"
@@ -53,7 +59,6 @@ server {{
     }}
 }}
 """
-from deploy_common import USER, require_deploy_host, require_deploy_pass
 
 
 def run(ssh: paramiko.SSHClient, cmd: str) -> tuple[int, str, str]:
@@ -77,6 +82,8 @@ def upload_tree(sftp: paramiko.SFTPClient, local_dir: Path, remote_dir: str) -> 
 
 
 def main() -> int:
+    require_intelligence_regression_pass()
+
     if not LOCAL_DIST.is_dir():
         print(f"dist/ missing — run: npm run build ({LOCAL_DIST})")
         return 1

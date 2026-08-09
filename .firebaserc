@@ -1,15 +1,14 @@
 {
   "projects": {
-    "default": "decisive-patrol-dszp9"
+    "default": "zinesh"
   },
   "targets": {
-    "decisive-patrol-dszp9": {
+    "zinesh": {
       "hosting": {
         "app": [
-          "decisive-patrol-dszp9"
+          "zinesh"
         ]
       }
     }
-  },
-  "etags": {}
+  }
 }

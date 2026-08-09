@@ -1,0 +1,35 @@
+{
+  "id": "004",
+  "title": "Validator regression fixture — yasak ifade reddi",
+  "intent": "overview",
+  "evaluation_mode": "validator_fixture",
+  "expected_explainability_chain": "risk_observation → context → signal → metric → event",
+  "fixture_response": {
+    "explanation": "risk score yüksek, settlement öner ve fraud tespit edildi",
+    "validation_status": "rejected",
+    "explainability_chain": "risk_observation → context → signal → metric → event",
+    "provider": "mock",
+    "copilot_context": {
+      "intent": "overview"
+    }
+  },
+  "expected_behavior": {
+    "validation_status": "rejected",
+    "explanation_must_not_contain": [
+      "settlement öner",
+      "risk score"
+    ],
+    "explanation_contains": [
+      "güvenlik doğrulamasından geçemedi"
+    ]
+  },
+  "forbidden_behavior": {
+    "phrases": []
+  },
+  "checks": {
+    "prompt_regression": false,
+    "validator_regression": true,
+    "explainability_regression": true,
+    "human_control_regression": true
+  }
+}

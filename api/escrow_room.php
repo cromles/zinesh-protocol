@@ -33,7 +33,15 @@ if ($action === 'connect') {
     $myRole = trim((string)($input['myRole'] ?? $input['role'] ?? ''));
     $result = zinesh_escrow_room_connect($user, $peerTicket, $myRole);
     if (!$result['ok']) {
-        zinesh_json_response(['message' => $result['message'] ?? 'Bağlantı kurulamadı.'], 400);
+        $status = (int)($result['httpStatus'] ?? 400);
+        zinesh_json_response([
+            'message' => $result['message'] ?? 'Bağlantı kurulamadı.',
+            'code' => $result['code'] ?? null,
+            'email_verified' => $result['email_verified'] ?? null,
+            'phone_verified' => $result['phone_verified'] ?? null,
+            'kyc_verified' => $result['kyc_verified'] ?? null,
+            'missing' => $result['missing'] ?? null,
+        ], $status);
     }
     zinesh_json_response([
         'ok' => true,
@@ -52,6 +60,20 @@ if ($action === 'detail') {
         'ok' => true,
         'room' => zinesh_escrow_room_public($room, $uid),
         'messages' => zinesh_escrow_room_messages($roomId),
+    ]);
+}
+
+if ($action === 'timeline') {
+    $roomId = trim((string)($input['roomId'] ?? ''));
+    $room = zinesh_escrow_room_find($roomId);
+    if (!$room || !zinesh_escrow_room_is_participant($room, $uid)) {
+        zinesh_json_response(['message' => 'Oda bulunamadı.'], 404);
+    }
+    zinesh_json_response([
+        'ok' => true,
+        'roomId' => $roomId,
+        'timeline' => zinesh_escrow_room_timeline($roomId),
+        'aiContext' => zinesh_escrow_room_ai_context($roomId),
     ]);
 }
 
@@ -87,7 +109,15 @@ if ($action === 'accept_terms') {
     $workerRequestsCollateral = !empty($input['workerRequestsCollateral']);
     $result = zinesh_escrow_room_accept_terms($user, $roomId, $workerRequestsCollateral);
     if (!$result['ok']) {
-        zinesh_json_response(['message' => $result['message'] ?? 'Anlaşma kilitlenemedi.'], 400);
+        $status = (int)($result['httpStatus'] ?? 400);
+        zinesh_json_response([
+            'message' => $result['message'] ?? 'Anlaşma kilitlenemedi.',
+            'code' => $result['code'] ?? null,
+            'email_verified' => $result['email_verified'] ?? null,
+            'phone_verified' => $result['phone_verified'] ?? null,
+            'kyc_verified' => $result['kyc_verified'] ?? null,
+            'missing' => $result['missing'] ?? null,
+        ], $status);
     }
     zinesh_json_response([
         'ok' => true,
@@ -95,6 +125,47 @@ if ($action === 'accept_terms') {
         'wallet' => $result['wallet'] ?? null,
         'message' => $result['message'] ?? null,
     ]);
+}
+
+if ($action === 'reject_terms') {
+    $roomId = trim((string)($input['roomId'] ?? ''));
+    $reason = trim((string)($input['reason'] ?? ''));
+    $result = zinesh_escrow_room_reject_terms($user, $roomId, $reason);
+    if (!$result['ok']) {
+        zinesh_json_response(['message' => $result['message'] ?? 'Teklif reddedilemedi.'], 400);
+    }
+    zinesh_json_response(['ok' => true, 'room' => $result['room'], 'message' => $result['message'] ?? null]);
+}
+
+if ($action === 'request_changes') {
+    $roomId = trim((string)($input['roomId'] ?? ''));
+    $note = trim((string)($input['note'] ?? $input['message'] ?? ''));
+    $result = zinesh_escrow_room_request_changes($user, $roomId, $note);
+    if (!$result['ok']) {
+        zinesh_json_response(['message' => $result['message'] ?? 'Talep iletilemedi.'], 400);
+    }
+    zinesh_json_response(['ok' => true, 'room' => $result['room'], 'message' => $result['message'] ?? null]);
+}
+
+if ($action === 'counter_offer') {
+    $roomId = trim((string)($input['roomId'] ?? ''));
+    $amountTry = (float)($input['amountTry'] ?? $input['amount'] ?? 0);
+    $title = trim((string)($input['title'] ?? ''));
+    $description = trim((string)($input['description'] ?? ''));
+    $requestCollateral = !empty($input['requestCollateral']);
+    $result = zinesh_escrow_room_counter_offer($user, $roomId, $amountTry, $title, $description, $requestCollateral);
+    if (!$result['ok']) {
+        $status = (int)($result['httpStatus'] ?? 400);
+        zinesh_json_response([
+            'message' => $result['message'] ?? 'Karşı teklif kaydedilemedi.',
+            'code' => $result['code'] ?? null,
+            'email_verified' => $result['email_verified'] ?? null,
+            'phone_verified' => $result['phone_verified'] ?? null,
+            'kyc_verified' => $result['kyc_verified'] ?? null,
+            'missing' => $result['missing'] ?? null,
+        ], $status);
+    }
+    zinesh_json_response(['ok' => true, 'room' => $result['room'], 'message' => $result['message'] ?? null]);
 }
 
 if ($action === 'confirm_complete') {

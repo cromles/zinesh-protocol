@@ -86,8 +86,12 @@ return [
     /** Hot wallet otomatik çekim üst sınırı — kasada bu tutarın üzerinde USDT varsa manuel onay gerekir */
     'hot_wallet_max_usdt' => 500.0,
 
-    // Rate limit (istek/dakika)
+    // Rate limit (istek/dakika, IP başına)
     'rate_limits' => [
+        /** Tüm /api/*.php istekleri — DDoS'ta origin'i korur */
+        'global_api' => 350,
+        /** 429 sonrası bekleme (saniye); Retry-After başlığı */
+        'retry_after' => 15,
         'auth' => 20,
         'deposit' => 10,
         'withdraw' => 5,
@@ -95,6 +99,12 @@ return [
         'ai_chat' => 20,
         'notifications_read' => 120,
         'notifications_write' => 40,
+    ],
+
+    /** JSON dosya kilidi — yoğunlukta kısa retry sonra 503 */
+    'file_lock' => [
+        'retries' => 6,
+        'retry_ms' => 30,
     ],
 
     /**
@@ -105,6 +115,12 @@ return [
 
     /** Token mutlak üst süre (saniye) — hareketsizlikten bağımsız; mobil için 30 gün */
     'session_max_seconds' => 60 * 60 * 24 * 30,
+
+    /**
+     * Demo modu — yalnızca staging / localhost (production'da false kalmalı).
+     * true: demo.php + tek tık demo girişi aktif.
+     */
+    'demo_mode' => false,
 
     /** UA parmak izi — kapalı (heal ile zorlanır); oturum düşürmesin */
     'session_bind_fingerprint' => false,
@@ -171,6 +187,8 @@ return [
     ],
 
     'mail' => [
+        // noreply@zinesh.com yalnızca Brevo'da domain doğrulandıktan sonra kullanılabilir.
+        // email_lib.php doğrulanmamış adresi kurucu e-postasına düşürür.
         'from_email' => 'noreply@zinesh.com',
         'from_name' => 'Zinesh',
         'site_url' => 'https://www.zinesh.com',
@@ -195,7 +213,7 @@ return [
 
     /** Frontend olay telemetrisi — /api/events.php */
     'events' => [
-        'rate_limit_per_minute' => 120,
+        'rate_limit_per_minute' => 60,
         'allowed' => [
             'app_loaded',
             'landing_view',
@@ -211,8 +229,8 @@ return [
     /** Google ile giriş — Firebase popup veya sunucu yönlendirmesi (ücretsiz, Blaze gerekmez) */
     'google_oauth' => [
         'enabled' => true,
-        'firebase_web_api_key' => 'AIzaSyBi9EkzJMB9IooLWHbxg-22A8Eo5xA0kGg',
-        'client_id' => '970378833039-dv1mpkbp7448amub6ueng5j8nop31cd2.apps.googleusercontent.com',
+        'firebase_web_api_key' => 'AIzaSyAZABFLej-na9bRcCI6-e3iwv0bA1tQkn4',
+        'client_id' => '492794009757-8cqfdv9mb3kc1kg0kiqre9mtosm1inol.apps.googleusercontent.com',
         // client_secret yalnızca config.local.php — GIS akışında gerekmez
     ],
 ];

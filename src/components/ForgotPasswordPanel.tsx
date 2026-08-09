@@ -86,7 +86,7 @@ export default function ForgotPasswordPanel({ initialEmail = '', onBackToLogin }
   };
 
   const inputClass =
-    'w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-purple-500/30 transition-colors';
+    'w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 transition-colors focus:border-emerald-500/40 focus:outline-none';
 
   return (
     <div className="space-y-5">
@@ -99,7 +99,7 @@ export default function ForgotPasswordPanel({ initialEmail = '', onBackToLogin }
       </button>
 
       <div className="text-center space-y-1">
-        <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 mb-2">
+        <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 mb-2">
           <ShieldCheck className="h-5 w-5" />
         </div>
         <h4 className="font-display font-bold text-white text-lg">Şifremi Unuttum</h4>
@@ -136,7 +136,7 @@ export default function ForgotPasswordPanel({ initialEmail = '', onBackToLogin }
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 rounded-xl bg-purple-600 text-white font-semibold text-sm hover:bg-purple-500 transition cursor-pointer disabled:opacity-60"
+            className="w-full py-3.5 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-500 transition cursor-pointer disabled:opacity-60"
           >
             {loading ? 'Gönderiliyor...' : 'Kod Gönder'}
           </button>
@@ -165,7 +165,7 @@ export default function ForgotPasswordPanel({ initialEmail = '', onBackToLogin }
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 rounded-xl bg-purple-600 text-white font-semibold text-sm hover:bg-purple-500 transition cursor-pointer disabled:opacity-60"
+            className="w-full py-3.5 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-500 transition cursor-pointer disabled:opacity-60"
           >
             {loading ? 'Doğrulanıyor...' : 'Kodu Doğrula'}
           </button>
@@ -228,7 +228,7 @@ export default function ForgotPasswordPanel({ initialEmail = '', onBackToLogin }
           <button
             type="button"
             onClick={onBackToLogin}
-            className="w-full py-3.5 rounded-xl bg-purple-600 text-white font-semibold text-sm hover:bg-purple-500 transition cursor-pointer"
+            className="w-full py-3.5 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-500 transition cursor-pointer"
           >
             Giriş Yap
           </button>

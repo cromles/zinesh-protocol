@@ -7,7 +7,7 @@ from pathlib import Path
 
 import paramiko
 
-from deploy_common import USER, require_deploy_host, require_deploy_pass
+from deploy_common import USER, require_deploy_host, require_deploy_pass, require_intelligence_regression_pass
 
 PASSWORD = require_deploy_pass()
 DEPLOY_HOST = require_deploy_host()
@@ -34,6 +34,9 @@ API_REL_PATHS = [
     "notifications.php",
     "trust_profile.php",
     "kyc_lib.php",
+    "verification_lib.php",
+    "phone_lib.php",
+    "firebase_auth_lib.php",
     "password_reset_lib.php",
     "totp_lib.php",
     "totp_reset_lib.php",
@@ -49,6 +52,9 @@ API_REL_PATHS = [
     "founder_health_lib.php",
     "escrow_jobs_lib.php",
     "escrow_room_lib.php",
+    "escrow_memory_lib.php",
+    "zinesh_domain_events_lib.php",
+    "contract_versions_lib.php",
     "escrow_room.php",
     "tl_havale_lib.php",
     "tl_mode_lib.php",
@@ -57,6 +63,14 @@ API_REL_PATHS = [
     "tl_payment_lib.php",
     "ai_chat.php",
     "ai_chat_lib.php",
+    "ai_context.php",
+    "ai_context_lib.php",
+    "trust_intelligence_lib.php",
+    "trust_metrics.php",
+    "trust_metrics_lib.php",
+    "actor_trust_lib.php",
+    "actor_trust.php",
+    "actor_trust_endpoint_lib.php",
     "veri_modeli.php",
     "scripts/bootstrap-data-files.php",
 ]
@@ -83,6 +97,8 @@ def upload_tree(sftp: paramiko.SFTPClient, local_dir: Path, remote_dir: str) -> 
 
 
 def main() -> int:
+    require_intelligence_regression_pass()
+
     if not LOCAL_DIST.is_dir():
         print(f"dist/ missing — run: npm run build ({LOCAL_DIST})")
         return 1
@@ -128,8 +144,8 @@ def main() -> int:
         sftp.close()
 
         probes = [
-            "curl -s -o /dev/null -w 'www=%{http_code}\\n' https://www.zinesh.com/",
-            "curl -s -o /dev/null -w 'app=%{http_code}\\n' https://app.zinesh.com/",
+            "curl -s -o /dev/null -w 'www=%{http_code}\\n' -A 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' https://www.zinesh.com/",
+            "curl -s -o /dev/null -w 'app=%{http_code}\\n' -A 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' https://app.zinesh.com/",
         ]
         print("=== Live probes ===")
         for cmd in probes:

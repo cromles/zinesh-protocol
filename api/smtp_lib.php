@@ -74,6 +74,8 @@ function zinesh_smtp_send(
         }
         $message .= "Subject: {$encodedSubject}\r\n";
         $message .= "MIME-Version: 1.0\r\n";
+        $message .= "Auto-Submitted: auto-generated\r\n";
+        $message .= "X-Auto-Response-Suppress: All\r\n";
         $message .= $mimeBody;
         $message .= "\r\n.\r\n";
 

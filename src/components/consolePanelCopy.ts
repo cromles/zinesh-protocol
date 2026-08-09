@@ -1,6 +1,12 @@
 import { DISPUTE_OUTCOMES_NOTE, PLAIN_ESCROW_NOTE } from '../lib/plainLanguage';
 
-export type ConsolePaneId = 'dashboard' | 'hizmet-al' | 'sozlesmelerim';
+export type ConsolePaneId =
+  | 'dashboard'
+  | 'bilgilerim'
+  | 'hizmet-al'
+  | 'sozlesmelerim'
+  | 'cuzdan'
+  | 'bildirimler';
 
 export interface PanelGuide {
   title: string;
@@ -12,8 +18,8 @@ export interface PanelGuide {
 
 export const PANEL_GUIDES: Record<ConsolePaneId, PanelGuide> = {
   dashboard: {
-    title: 'Ana Sayfam',
-    subtitle: 'Kasa ve hızlı işlemler',
+    title: 'Genel Bakış',
+    subtitle: 'Güvenli anlaşmalar, şeffaf süreçler',
     purpose: 'Önce yazılı sözleşme, sonra kasa. Emanet başlatıp karşı tarafla şartlarda anlaşın; onay sonrası tutar güvenli kasaya yatırılır.',
     steps: [
       'Emanet başlat: karşı tarafla sözleşme şartlarında anlaşın.',
@@ -22,9 +28,20 @@ export const PANEL_GUIDES: Record<ConsolePaneId, PanelGuide> = {
     ],
     protocolNote: 'Para kasada; sözleşme şartları karşılanana kadar kimseye verilmez.',
   },
+  bilgilerim: {
+    title: 'Bilgilerim',
+    subtitle: 'Hesap ve üyelik bilgilerin',
+    purpose: 'Ad, e-posta, üye numarası ve doğrulama durumun tek ekranda.',
+    steps: [
+      'Üye numaranı emanet işlemlerinde karşı tarafa ilet.',
+      'E-posta ve kimlik doğrulamasını tamamla.',
+      'Güven puanın tamamlanan işlemlerle artar.',
+    ],
+    protocolNote: 'Kişisel bilgiler yalnızca güvenlik ve kimlik doğrulama için kullanılır.',
+  },
   'hizmet-al': {
-    title: 'Emanet başlat',
-    subtitle: 'Önce sözleşme, sonra kasa',
+    title: 'Yeni Anlaşma',
+    subtitle: 'Karşı tarafın ZN-ID ile emanet bağlantısı',
     purpose:
       'Karşı tarafın üye numarasını girin, rolünüzü seçin (alıcı/satıcı) ve yazılı sözleşme şartlarında anlaşın. Onay sonrası tutar kasaya kilitlenir.',
     steps: [
@@ -35,8 +52,8 @@ export const PANEL_GUIDES: Record<ConsolePaneId, PanelGuide> = {
     protocolNote: `${DISPUTE_OUTCOMES_NOTE} Tamamlanan işlerden %5 protokol komisyonu kesilir.`,
   },
   sozlesmelerim: {
-    title: 'Emanetlerim',
-    subtitle: 'Devam eden ve biten işler',
+    title: 'Anlaşmalarım',
+    subtitle: 'Devam eden ve tamamlanan anlaşmalar',
     purpose: 'Yazılı sözleşmeye bağlı tüm emanet işlemleriniz. Onay bekleyen, itirazlı ve tamamlanan kayıtlar tek ekranda.',
     steps: [
       'İşi seçin.',
@@ -45,37 +62,59 @@ export const PANEL_GUIDES: Record<ConsolePaneId, PanelGuide> = {
     ],
     protocolNote: PLAIN_ESCROW_NOTE,
   },
+  cuzdan: {
+    title: 'Cüzdan',
+    subtitle: 'Bakiye yükleme ve işlem geçmişi',
+    purpose: 'Kullanılabilir bakiyenizi görün, TL yükleyin ve hareketleri takip edin.',
+    steps: [
+      'Bakiye yükle sekmesinden TL yatırın.',
+      'Kullanılabilir bakiyeniz anlaşma kilitleme için kullanılır.',
+      'İşlem geçmişinden hareketleri inceleyin.',
+    ],
+    protocolNote: 'Bakiye yalnızca onaylı emanet süreçlerinde kilitlenir.',
+  },
+  bildirimler: {
+    title: 'Bildirimler',
+    subtitle: 'Anlaşma ve süreç bildirimleri',
+    purpose: 'Emanet odası güncellemeleri ve onay bekleyen işlemler.',
+    steps: [
+      'Okunmamış bildirimleri kontrol edin.',
+      'İlgili anlaşmaya gidip işlemi tamamlayın.',
+    ],
+    protocolNote: 'Bildirimler yalnızca hesabınıza bağlı anlaşmalar içindir.',
+  },
 };
 
 /** Gizlenen panel yok — sade 3 sekmelik konsol. */
 export const ESCROW_HIDDEN_PANES: readonly ConsolePaneId[] = [];
 
+export type QuickNavIconId = 'new-contract' | 'past-contracts' | 'wallet';
+
 export const NAV_CARDS: Array<{
   id: ConsolePaneId;
-  emoji: string;
+  icon: QuickNavIconId;
   label: string;
   short: string;
   color: 'purple' | 'orange' | 'sky' | 'emerald' | 'amber' | 'indigo';
 }> = [
-  { id: 'hizmet-al', emoji: '➕', label: 'Emanet başlat', short: 'Alıcı veya satıcı', color: 'purple' },
-  { id: 'sozlesmelerim', emoji: '📋', label: 'Emanetlerim', short: 'Onay ve itiraz', color: 'sky' },
+  { id: 'hizmet-al', icon: 'new-contract', label: 'Yeni Anlaşma', short: 'ZN-ID ile bağlan', color: 'purple' },
+  { id: 'sozlesmelerim', icon: 'past-contracts', label: 'Anlaşmalarım', short: 'Onay ve itiraz', color: 'sky' },
 ];
 
-export const MOBILE_QUICK_LINKS: Array<{
-  pane: ConsolePaneId;
-  label: string;
-  emoji: string;
-  scrollTarget?: string;
-}> = [
-  { pane: 'hizmet-al', label: 'Emanet', emoji: '➕' },
-  { pane: 'sozlesmelerim', label: 'Emanetlerim', emoji: '📋' },
-  { pane: 'dashboard', label: 'Kasa', emoji: '💼', scrollTarget: 'wallet-center' },
-];
+export const HEADER_WALLET_LINK = {
+  pane: 'cuzdan' as const,
+  label: 'Cüzdan',
+  icon: 'wallet' as const,
+  scrollTarget: 'wallet-center',
+};
 
 export function isPaneVisible(pane: ConsolePaneId): boolean {
   return !ESCROW_HIDDEN_PANES.includes(pane);
 }
 
 export function consolePaneAnchorId(pane: ConsolePaneId): string {
-  return pane === 'dashboard' ? 'console-dashboard' : `console-pane-${pane}`;
+  if (pane === 'dashboard') return 'console-dashboard';
+  if (pane === 'bilgilerim') return 'console-pane-bilgilerim';
+  if (pane === 'cuzdan') return 'wallet-center';
+  return `console-pane-${pane}`;
 }

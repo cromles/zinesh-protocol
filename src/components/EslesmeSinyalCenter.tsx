@@ -4,13 +4,15 @@ import {
   eslesmeSinyalEylemLabel,
   eslesmeSinyalKey,
   fetchEslesmeSinyaller,
+  fetchEslesmeSinyalOkunmamis,
   formatEslesmeSinyalTarih,
   isEslesmeSinyalArsiv,
   markEslesmeSinyalOkundu,
   type EslesmeSinyal,
 } from '../lib/eslesmeSinyalApi';
+import { CONSOLE_POLL_UNREAD_MS } from '../lib/consolePoll';
 
-const POLL_MS = 12_000;
+const POLL_MS = CONSOLE_POLL_UNREAD_MS;
 
 export interface EslesmeSinyalCenterProps {
   sessionToken?: string;
@@ -37,7 +39,7 @@ export default function EslesmeSinyalCenter({
   const [showArsiv, setShowArsiv] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const load = useCallback(async () => {
+  const loadFull = useCallback(async () => {
     if (!sessionToken) return;
     try {
       const data = await fetchEslesmeSinyaller(eslesmeId || undefined, 100, 0);
@@ -49,26 +51,42 @@ export default function EslesmeSinyalCenter({
     }
   }, [sessionToken, eslesmeId]);
 
+  const loadUnread = useCallback(async () => {
+    if (!sessionToken) return;
+    try {
+      const count = await fetchEslesmeSinyalOkunmamis(eslesmeId || undefined);
+      setOkunmamis(count);
+      setError('');
+    } catch {
+      /* sessiz — zil rozeti kritik değil */
+    }
+  }, [sessionToken, eslesmeId]);
+
   const loadList = useCallback(async () => {
     if (!sessionToken) return;
     setLoading(true);
     try {
-      await load();
+      await loadFull();
     } finally {
       setLoading(false);
     }
-  }, [sessionToken, load]);
+  }, [sessionToken, loadFull]);
 
   useEffect(() => {
     if (!sessionToken) return;
-    void load();
+    if (open) {
+      void loadFull();
+    } else {
+      void loadUnread();
+    }
     const tick = () => {
       if (document.visibilityState === 'hidden') return;
-      void load();
+      if (open) void loadFull();
+      else void loadUnread();
     };
     const t = window.setInterval(tick, POLL_MS);
     return () => window.clearInterval(t);
-  }, [sessionToken, load]);
+  }, [sessionToken, open, loadFull, loadUnread]);
 
   useEffect(() => {
     if (open) void loadList();
@@ -110,7 +128,7 @@ export default function EslesmeSinyalCenter({
     setBusyKey(key);
     try {
       await onEylem(s);
-      await load();
+      await loadFull();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Eylem başarısız.');
     } finally {

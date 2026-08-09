@@ -1,17 +1,6 @@
-import React from 'react';
-import {
-  ArrowRight,
-  BadgeCheck,
-  FileCheck,
-  Link2,
-  Lock,
-  MessageSquare,
-  Scale,
-  Shield,
-} from 'lucide-react';
-import ZineshLogo from './ZineshLogo';
-import HomeStarfield from './HomeStarfield';
-import { DISPUTE_OUTCOMES_NOTE, ESCROW_ONLY_TAGLINE, PLAIN_ESCROW_HERO } from '../lib/plainLanguage';
+import React, { useEffect, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
+import ZineshFrame from './ZineshFrame';
 import { CURRENCY_NAME } from '../lib/productMode';
 
 interface HomeStoryFlowProps {
@@ -20,37 +9,94 @@ interface HomeStoryFlowProps {
   onGoToConsole?: () => void;
 }
 
-const JOURNEY = [
-  {
-    icon: Link2,
-    phase: 'Eşleş',
-    title: 'Üye ID ile buluşun',
-    text: 'Karşı tarafın numarasını girin, rolünüzü seçin — alıcı veya satıcı.',
-  },
-  {
-    icon: MessageSquare,
-    phase: 'Konuş',
-    title: 'Talepleri netleştirin',
-    text: 'Ne isteniyor, ne teslim edilecek; beğenmezseniz düzeltir veya başlamazsınız.',
-  },
-  {
-    icon: FileCheck,
-    phase: 'Yaz',
-    title: 'Sözleşmeyi yazın',
-    text: 'Kapsam, teslim ve tutar tek metinde. Karşı taraf onaylamadan para kilitlenmez.',
-  },
-  {
-    icon: Lock,
-    phase: 'Kilitle',
-    title: 'Para kasada bekler',
-    text: `Anlaşınca tutar Zinesh kasasında durur; iş şartlara göre yürür.`,
-  },
-  {
-    icon: BadgeCheck,
-    phase: 'Bitir',
-    title: 'Teslim ve onay',
-    text: 'Satıcı teslim eder, alıcı kontrol eder. Onaylanınca ödeme serbest kalır.',
-  },
+const ESCROW_PHASE_COUNT = 5;
+
+function useEscrowPhase(intervalMs = 3200) {
+  const [phase, setPhase] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const timer = window.setInterval(() => {
+      setPhase((current) => (current + 1) % ESCROW_PHASE_COUNT);
+    }, intervalMs);
+    return () => window.clearInterval(timer);
+  }, [intervalMs]);
+
+  return phase;
+}
+
+function TrustEscrowCinema({ phase, compact = false }: { phase: number; compact?: boolean }) {
+  return (
+    <div
+      className={`trust-cinema ${compact ? 'trust-cinema-compact' : ''}`}
+      data-phase={phase}
+      aria-hidden={compact}
+      {...(!compact ? { 'aria-label': 'Emanet işlemi görsel akışı', role: 'img' as const } : {})}
+    >
+      <div className="trust-cinema-stage">
+        <div className="trust-direct-rail">
+          <span className="trust-direct-line" />
+          <span className="trust-direct-block">✕</span>
+        </div>
+
+        <div className="trust-actor trust-actor-buyer">
+          <div className="trust-avatar trust-avatar-buyer" />
+          <span className="trust-actor-name">Alıcı</span>
+        </div>
+
+        <div className="trust-lane trust-lane-in">
+          <span className="trust-coin trust-coin-in" />
+        </div>
+
+        <div className="trust-vault-shell">
+          <ZineshFrame accent size="lg" className="trust-vault">
+            <div className="trust-vault-core">
+              <span className="trust-vault-lock" />
+            </div>
+          </ZineshFrame>
+        </div>
+
+        <div className="trust-lane trust-lane-out">
+          <span className="trust-coin trust-coin-out" />
+        </div>
+
+        <div className="trust-actor trust-actor-seller">
+          <div className="trust-avatar trust-avatar-seller" />
+          <span className="trust-actor-name">Satıcı</span>
+        </div>
+
+        <div className="trust-document">
+          <span className="trust-doc-line trust-doc-line-1" />
+          <span className="trust-doc-line trust-doc-line-2" />
+          <span className="trust-doc-line trust-doc-line-3" />
+        </div>
+
+        <div className="trust-delivery">
+          <span className="trust-delivery-mark" />
+        </div>
+
+        <div className="trust-release">
+          <span className="trust-release-mark">✓</span>
+        </div>
+      </div>
+
+      <div className="trust-phase-rail">
+        {Array.from({ length: ESCROW_PHASE_COUNT }).map((_, index) => (
+          <span
+            key={index}
+            className={`trust-phase-dot ${index < phase ? 'is-done' : ''} ${index === phase ? 'is-active' : ''}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const TRUST_PILLARS = [
+  { title: 'Yazılı', visual: 'document' as const },
+  { title: 'Emanet', visual: 'vault' as const },
+  { title: 'Tarafsız', visual: 'balance' as const },
 ] as const;
 
 export default function HomeStoryFlow({
@@ -59,198 +105,87 @@ export default function HomeStoryFlow({
   onGoToConsole,
 }: HomeStoryFlowProps) {
   const primaryAction = () => (isLoggedIn ? onGoToConsole?.() : onJoinClick());
+  const escrowPhase = useEscrowPhase();
 
   return (
-    <div className="home-canvas relative overflow-x-clip">
-      {/* Tek arka plan — tüm sayfa */}
+    <div className="home-canvas trust-canvas relative overflow-x-clip">
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-        <HomeStarfield />
-        <div className="home-ambient home-ambient-a" />
-        <div className="home-ambient home-ambient-b" />
-        <div className="home-grid-fade" />
+        <div className="trust-warmth trust-warmth-a" />
+        <div className="trust-warmth trust-warmth-b" />
       </div>
 
-      {/* —— Hero —— */}
-      <section id="hero" className="relative z-10 pt-[calc(4.5rem+env(safe-area-inset-top))] pb-16 sm:pb-20">
-        <div className="mx-auto w-full max-w-6xl px-5 sm:px-8">
-          <div className="grid items-center gap-10 lg:grid-cols-[1fr_0.95fr] lg:gap-14">
-            <div className="text-center lg:text-left">
-              <p className="hero-enter hero-enter-1 font-mono text-[10px] sm:text-[11px] uppercase tracking-[0.22em] text-violet-300/90">
-                Güvenli ödeme · {CURRENCY_NAME} emanet
-              </p>
+      <section id="hero" className="relative z-10 pt-[calc(4rem+env(safe-area-inset-top))] pb-12 sm:pb-16">
+        <div className="mx-auto w-full max-w-4xl px-5 sm:px-8">
+          <div className="hero-enter hero-enter-1">
+            <TrustEscrowCinema phase={escrowPhase} />
+          </div>
 
-              <h1 className="hero-enter hero-enter-2 mt-3 font-display text-[clamp(1.75rem,4.5vw,2.85rem)] font-bold leading-[1.1] tracking-[-0.035em] text-white">
-                Önce net sözleşme,
-                <span className="block bg-gradient-to-r from-violet-200 via-white to-amber-100/90 bg-clip-text text-transparent">
-                  sonra para
-                </span>
-              </h1>
+          <div className="hero-enter hero-enter-3 mt-10 sm:mt-12 text-center">
+            <h1 className="font-display text-[clamp(1.85rem,4.5vw,2.75rem)] font-bold leading-[1.1] tracking-[-0.03em] text-white">
+              Paran, şartlar gerçekleşene kadar güvende.
+            </h1>
+            <p className="sr-only">
+              {CURRENCY_NAME} emanet kasasında tutulur; ödeme doğrudan karşı tarafa gitmez.
+            </p>
+          </div>
 
-              <p className="hero-enter hero-enter-3 mt-4 max-w-xl mx-auto lg:mx-0 text-[clamp(0.95rem,1.85vw,1.06rem)] leading-relaxed text-white/72">
-                {PLAIN_ESCROW_HERO}
-              </p>
-
-              <p className="hero-enter hero-enter-4 mt-2 text-sm text-violet-200/70 max-w-lg mx-auto lg:mx-0">
-                {ESCROW_ONLY_TAGLINE}
-              </p>
-
-              <div className="hero-enter hero-enter-5 mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-                <button
-                  type="button"
-                  onClick={primaryAction}
-                  className="group inline-flex h-[50px] items-center justify-center gap-2 rounded-full bg-white px-8 text-[15px] font-semibold text-black shadow-[0_0_40px_rgba(255,255,255,0.12)] transition hover:bg-zinc-100"
-                >
-                  {isLoggedIn ? 'Hesabıma Git' : 'Ücretsiz Başla'}
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                </button>
-                <a
-                  href="#how-it-works"
-                  className="inline-flex h-[50px] items-center justify-center rounded-full border border-white/12 bg-white/[0.04] px-8 text-[15px] font-semibold text-white/88 backdrop-blur-sm transition hover:bg-white/[0.08]"
-                >
-                  Nasıl çalışır?
-                </a>
-              </div>
-            </div>
-
-            {/* Ürün önizlemesi — soyut sözleşme → kasa akışı */}
-            <div className="hero-enter hero-enter-6 relative mx-auto w-full max-w-md lg:max-w-none">
-              <div className="home-preview-glass relative rounded-3xl border border-white/[0.09] p-5 sm:p-6">
-                <div className="absolute -top-px left-8 right-8 h-px bg-gradient-to-r from-transparent via-violet-400/50 to-transparent" />
-                <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-emerald-400" strokeWidth={2} aria-hidden />
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-400">
-                      Yazılı sözleşme
-                    </span>
-                  </div>
-                  <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 font-mono text-[10px] text-emerald-300">
-                    Onay bekliyor
-                  </span>
-                </div>
-                <div className="mt-4 space-y-2.5 font-mono text-[11px] text-zinc-500">
-                  <p className="text-zinc-300">· Logo tasarımı, 3 revizyon, 7 gün teslim</p>
-                  <p>· Tutar: 4.500 {CURRENCY_NAME}</p>
-                  <p>· İtirazda bu metin esas alınır</p>
-                </div>
-                <div className="home-preview-flow mt-5 flex items-center justify-between gap-2 rounded-2xl border border-white/[0.06] bg-black/30 px-3 py-3">
-                  {['Eşleş', 'Yaz', 'Kilit', 'Onay'].map((label, i) => (
-                    <React.Fragment key={label}>
-                      <div className="flex flex-col items-center gap-1 min-w-0 flex-1">
-                        <div
-                          className={`flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-bold ${
-                            i < 3
-                              ? 'bg-violet-500/20 text-violet-200 ring-1 ring-violet-400/30'
-                              : 'bg-white/10 text-zinc-400 ring-1 ring-white/10'
-                          }`}
-                        >
-                          {i + 1}
-                        </div>
-                        <span className="text-[9px] text-zinc-500 truncate w-full text-center">{label}</span>
-                      </div>
-                      {i < 3 && (
-                        <div className="h-px flex-1 max-w-[20px] bg-gradient-to-r from-violet-500/40 to-white/10" />
-                      )}
-                    </React.Fragment>
-                  ))}
-                </div>
-                <p className="mt-4 text-center text-[11px] text-zinc-500">
-                  Para kilitlenmeden önce her iki taraf da şartları görür
-                </p>
-              </div>
-              <div className="absolute -right-4 -bottom-4 -z-10 h-32 w-32 rounded-full bg-violet-600/20 blur-3xl" />
-              <div className="absolute -left-6 -top-6 -z-10 h-28 w-28 rounded-full bg-amber-500/15 blur-3xl" />
-            </div>
+          <div className="hero-enter hero-enter-5 mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              type="button"
+              onClick={primaryAction}
+              aria-label={isLoggedIn ? 'Hesabıma git' : 'Ücretsiz başla'}
+              className="home-btn-primary group inline-flex h-[52px] items-center justify-center gap-2 rounded-full bg-white px-9 text-[15px] font-semibold text-[#1a1510]"
+            >
+              {isLoggedIn ? 'Hesabıma Git' : 'Ücretsiz Başla'}
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+            </button>
+            <a
+              href="#how-it-works"
+              className="home-btn-secondary inline-flex h-[52px] items-center justify-center rounded-full border border-white/15 bg-white/[0.05] px-9 text-[15px] font-semibold text-white/90"
+            >
+              Nasıl çalışır?
+            </a>
           </div>
         </div>
       </section>
 
-      {/* —— Problem → Çözüm köprüsü —— */}
-      <section className="relative z-10 py-14 sm:py-16">
-        <div className="mx-auto max-w-3xl px-5 text-center">
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-amber-300/80">Neden Zinesh</p>
-          <h2 className="mt-3 font-display text-[clamp(1.35rem,3.2vw,2rem)] font-bold tracking-tight text-white">
-            Başlangıçta net olmayan iş, sonda bozulur
+      <section id="how-it-works" className="relative z-10 py-16 sm:py-20" aria-labelledby="how-heading">
+        <div className="mx-auto w-full max-w-4xl px-5 sm:px-8 text-center">
+          <h2 id="how-heading" className="sr-only">
+            Emanet nasıl çalışır
           </h2>
-          <p className="mt-3 text-[15px] leading-relaxed text-white/60">
-            Yazılı şartlar ve emanet kasası birlikte çalışır — hem iş ölçülür hem anlaşmazlıkta
-            sorumluluk bellidir.
-          </p>
+          <TrustEscrowCinema phase={escrowPhase} compact />
         </div>
       </section>
 
-      {/* —— Tek yolculuk timeline —— */}
-      <section id="how-it-works" className="relative z-10 pb-16 sm:pb-24">
+      <section className="relative z-10 py-14 sm:py-16 border-t border-white/[0.06]" aria-label="Güven ilkeleri">
         <div className="mx-auto w-full max-w-3xl px-5 sm:px-8">
-          <div className="mb-10 text-center sm:text-left">
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-violet-400">
-              5 adımda
-            </span>
-            <h2 className="mt-2 font-display text-2xl sm:text-3xl font-bold text-white tracking-tight">
-              Sözleşmeden ödemeye tek hat
-            </h2>
-          </div>
-
-          <ol className="home-journey relative space-y-0">
-            {JOURNEY.map((step, idx) => (
-              <li key={step.title} className="home-journey-step relative flex gap-4 sm:gap-5 pb-8 last:pb-0">
-                <div className="relative flex flex-col items-center">
-                  <div className="relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-violet-500/30 bg-violet-500/10 text-violet-200 shadow-[0_0_24px_rgba(139,92,246,0.15)]">
-                    <step.icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
-                  </div>
-                  {idx < JOURNEY.length - 1 && (
-                    <div className="home-journey-line absolute top-11 bottom-0 w-px bg-gradient-to-b from-violet-500/40 via-white/10 to-transparent" />
-                  )}
-                </div>
-                <div className="home-journey-card flex-1 rounded-2xl border border-white/[0.07] bg-white/[0.025] px-4 py-4 sm:px-5 sm:py-4 backdrop-blur-[2px]">
-                  <p className="font-mono text-[10px] uppercase tracking-wider text-violet-300/70">
-                    {step.phase}
-                  </p>
-                  <h3 className="mt-1 font-display text-lg font-bold text-white">{step.title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-white/58">{step.text}</p>
-                </div>
+          <ul className="trust-pillars grid grid-cols-3 gap-4 sm:gap-8">
+            {TRUST_PILLARS.map((pillar) => (
+              <li key={pillar.title} className="trust-pillar flex flex-col items-center text-center">
+                <div className={`trust-pillar-visual trust-pillar-${pillar.visual}`} aria-hidden />
+                <p className="mt-4 font-display text-base sm:text-lg font-semibold text-white/90">{pillar.title}</p>
               </li>
             ))}
-          </ol>
-
-          <div className="mt-10 rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.07] to-transparent p-5 sm:p-6">
-            <div className="flex items-start gap-3">
-              <Scale className="h-5 w-5 text-amber-300 shrink-0 mt-0.5" aria-hidden />
-              <div>
-                <h3 className="font-display text-base font-bold text-white">İtiraz olursa</h3>
-                <p className="mt-1.5 text-sm text-white/55 leading-relaxed">{DISPUTE_OUTCOMES_NOTE}</p>
-              </div>
-            </div>
-          </div>
+          </ul>
         </div>
       </section>
 
-      {/* —— Kapanış CTA —— */}
       <section className="relative z-10 pb-20 sm:pb-28">
-        <div className="mx-auto max-w-2xl px-5">
-          <div className="home-cta-band relative overflow-hidden rounded-3xl border border-white/[0.1] px-6 py-10 sm:px-10 sm:py-12 text-center">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-violet-600/10 via-transparent to-amber-500/10" />
-            <div className="relative">
-              <div className="mx-auto mb-4 flex justify-center scale-75 sm:scale-90">
-                <ZineshLogo variant="medallion" size="md" showText={false} pulseGlow={false} interactive={false} />
-              </div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-400">
-                Önce sözleşme · sonra kasa
-              </p>
-              <h2 className="mt-3 font-display text-xl sm:text-2xl font-bold text-white">
-                Tanımadığın biriyle güvenle iş yap
-              </h2>
-              <p className="mt-2 text-sm text-white/55 max-w-md mx-auto">
-                Ücretsiz kayıt ol, üye numaranla eşleş, yazılı anlaşmayla başla.
-              </p>
-              <button
-                type="button"
-                onClick={primaryAction}
-                className="mt-7 inline-flex h-[48px] items-center justify-center gap-2 rounded-full bg-white px-8 text-[15px] font-semibold text-black transition hover:bg-zinc-100"
-              >
-                {isLoggedIn ? 'Konsola Git' : 'Ücretsiz Başla'}
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
+        <div className="mx-auto max-w-lg px-5 text-center">
+          <div className="trust-cta">
+            <h2 className="font-display text-xl sm:text-2xl font-bold text-white">
+              Tanımadığın biriyle de güvenle iş yap
+            </h2>
+            <button
+              type="button"
+              onClick={primaryAction}
+              aria-label={isLoggedIn ? 'Konsola git' : 'Ücretsiz başla'}
+              className="home-btn-primary mt-8 inline-flex h-[50px] items-center justify-center gap-2 rounded-full bg-white px-9 text-[15px] font-semibold text-[#1a1510]"
+            >
+              {isLoggedIn ? 'Konsola Git' : 'Ücretsiz Başla'}
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </button>
           </div>
         </div>
       </section>

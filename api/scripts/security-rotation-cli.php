@@ -39,7 +39,7 @@ function rot_merge_server_secrets(array $patch): array {
     $data = array_merge($data, $patch);
     $data['rotatedAt'] = date('c');
     file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
-    chmod($path, 0640);
+    zinesh_secure_secrets_file($path);
     return $data;
 }
 
