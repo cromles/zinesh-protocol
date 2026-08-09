@@ -10,6 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const PUBLIC = path.join(ROOT, 'public');
 const SITE = 'https://www.zinesh.com';
+const OG_IMAGE = `${SITE}/og-image.jpg`;
 
 const COMMON_LINKS = [
   { href: '/nedir/', label: 'Zinesh Nedir?' },
@@ -214,7 +215,7 @@ function renderPage(page) {
     <meta property="og:url" content="${url}">
     <meta property="og:title" content="${esc(page.ogTitle ?? page.h1)}">
     <meta property="og:description" content="${esc(page.description)}">
-    <meta property="og:image" content="${SITE}/google-logo.png">
+    <meta property="og:image" content="${OG_IMAGE}">
     <style>${STYLES}
     </style>${jsonLd}
   </head>

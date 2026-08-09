@@ -69,12 +69,21 @@ await googleMark
   .toFile(path.join(outDir, 'logo-1024.png'));
 console.log('wrote logo-1024.png');
 
-await googleMark
-  .clone()
-  .resize(1024, 1024)
-  .jpeg({ quality: 92 })
-  .toFile(path.join(outDir, 'og-image.jpg'));
-console.log('wrote og-image.jpg');
+const ogSource = path.join(outDir, 'og-image-source.png');
+if (fs.existsSync(ogSource)) {
+  await sharp(ogSource)
+    .resize(1200, 1200, { fit: 'inside', withoutEnlargement: false })
+    .jpeg({ quality: 90, mozjpeg: true })
+    .toFile(path.join(outDir, 'og-image.jpg'));
+  console.log('wrote og-image.jpg (from og-image-source.png)');
+} else {
+  await googleMark
+    .clone()
+    .resize(1024, 1024)
+    .jpeg({ quality: 92 })
+    .toFile(path.join(outDir, 'og-image.jpg'));
+  console.log('wrote og-image.jpg');
+}
 
 const sizes = [16, 32, 48, 96, 192, 512];
 const pngBuffers = [];
