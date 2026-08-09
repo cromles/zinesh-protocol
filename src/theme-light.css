@@ -1,0 +1,390 @@
+/**
+ * Light theme overrides — dark theme is default (no data-theme attribute).
+ */
+html[data-theme='light'] {
+  color-scheme: light;
+  --z-light-bg: #ffffff;
+  --z-light-bg-subtle: #f8fafc;
+  --z-light-surface: #ffffff;
+  --z-light-surface-2: #f1f5f9;
+  --z-light-surface-3: #e2e8f0;
+  --z-light-border: #e2e8f0;
+  --z-light-border-strong: #cbd5e1;
+  --z-light-text: #0f172a;
+  --z-light-text-secondary: #334155;
+  --z-light-text-muted: #64748b;
+  --z-light-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+html[data-theme='light'] body {
+  background-color: var(--z-light-bg) !important;
+  color: var(--z-light-text) !important;
+}
+
+html[data-theme='light'] :is(
+  .bg-slate-950,
+  .bg-slate-900,
+  .bg-zinc-950,
+  .bg-\[\#020203\],
+  .bg-\[\#020204\],
+  .bg-\[\#040408\],
+  .bg-\[\#0a0908\],
+  .bg-\[\#030307\],
+  .bg-\[\#09090e\],
+  .bg-\[\#0a0a10\],
+  .bg-\[\#0a0a0e\],
+  .bg-\[\#050508\],
+  .home-canvas,
+  .trust-canvas,
+  .trust-canvas.home-canvas
+) {
+  background-color: var(--z-light-bg) !important;
+}
+
+html[data-theme='light'] :is(
+  .bg-slate-950\/95,
+  .bg-slate-950\/85,
+  .bg-slate-950\/80,
+  .bg-slate-950\/70,
+  .bg-slate-950\/60,
+  .bg-slate-950\/50,
+  .bg-slate-950\/40,
+  .bg-slate-900\/90,
+  .bg-slate-900\/80,
+  .bg-slate-900\/70,
+  .bg-slate-900\/60,
+  .bg-slate-800\/80,
+  .bg-\[\#0a0a10\]\/95,
+  .bg-\[\#0a0a0e\]\/90,
+  .bg-\[\#09090e\]\/80
+) {
+  background-color: color-mix(in srgb, var(--z-light-surface) 92%, var(--z-light-surface-2)) !important;
+}
+
+html[data-theme='light'] .bg-slate-800 {
+  background-color: var(--z-light-surface-2) !important;
+}
+
+html[data-theme='light'] .bg-slate-900 {
+  background-color: var(--z-light-surface) !important;
+}
+
+/* Zinc palette — profil, ayarlar, güvenlik panelleri */
+html[data-theme='light'] :is(.bg-zinc-900, .bg-zinc-950) {
+  background-color: var(--z-light-bg) !important;
+}
+
+html[data-theme='light'] .bg-zinc-800 {
+  background-color: var(--z-light-surface-2) !important;
+}
+
+html[data-theme='light'] :is(.bg-zinc-900\/80, .bg-zinc-900\/50, .bg-zinc-950\/60, .bg-zinc-800\/80) {
+  background-color: color-mix(in srgb, var(--z-light-surface) 90%, var(--z-light-surface-2)) !important;
+}
+
+html[data-theme='light'] :is(
+  .bg-\[\#09090e\],
+  .bg-\[\#0a0a10\],
+  .bg-\[\#0a0a0e\],
+  .bg-\[rgba\(255\,255\,255\,0\.02\)\],
+  .bg-\[rgba\(255\,255\,255\,0\.015\)\]
+) {
+  background-color: var(--z-light-surface) !important;
+}
+
+html[data-theme='light'] :is(
+  .text-zinc-100,
+  .text-zinc-200
+) {
+  color: var(--z-light-text) !important;
+}
+
+html[data-theme='light'] :is(.text-zinc-300, .text-zinc-400) {
+  color: var(--z-light-text-secondary) !important;
+}
+
+html[data-theme='light'] :is(.text-zinc-500, .text-zinc-600) {
+  color: var(--z-light-text-muted) !important;
+}
+
+html[data-theme='light'] :is(
+  .border-zinc-600,
+  .border-zinc-700,
+  .border-zinc-800,
+  .border-zinc-900,
+  .border-zinc-900\/80
+) {
+  border-color: var(--z-light-border) !important;
+}
+
+html[data-theme='light'] .bg-grid-glow {
+  background-image:
+    radial-gradient(circle at 15% 45%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 85% 45%, rgba(20, 184, 166, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.05) 0%, transparent 65%),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.95), #ffffff);
+}
+
+html[data-theme='light'] :is(
+  .text-white,
+  .text-slate-100,
+  .text-slate-200,
+  .text-zinc-100,
+  .text-zinc-200
+) {
+  color: var(--z-light-text) !important;
+}
+
+html[data-theme='light'] :is(.text-slate-300, .text-zinc-300) {
+  color: var(--z-light-text-secondary) !important;
+}
+
+html[data-theme='light'] :is(.text-slate-400, .text-slate-500, .text-zinc-400, .text-zinc-500) {
+  color: var(--z-light-text-muted) !important;
+}
+
+html[data-theme='light'] .text-emerald-300 {
+  color: #047857 !important;
+}
+
+html[data-theme='light'] .text-emerald-400 {
+  color: #059669 !important;
+}
+
+html[data-theme='light'] .text-emerald-200 {
+  color: #065f46 !important;
+}
+
+html[data-theme='light'] :is(.text-slate-950, .text-slate-900) {
+  color: #020617 !important;
+}
+
+html[data-theme='light'] :is(
+  .border-slate-800,
+  .border-slate-800\/80,
+  .border-slate-700,
+  .border-zinc-800,
+  .border-zinc-900,
+  .border-zinc-900\/80,
+  .border-white\/10,
+  .border-white\/\[0\.06\],
+  .border-white\/\[0\.08\],
+  .border-white\/15
+) {
+  border-color: var(--z-light-border) !important;
+}
+
+html[data-theme='light'] :is(.hover\:bg-slate-900:hover, .hover\:bg-slate-900\/60:hover) {
+  background-color: var(--z-light-surface-2) !important;
+}
+
+html[data-theme='light'] :is(.hover\:bg-slate-800:hover, .hover\:bg-slate-700:hover) {
+  background-color: var(--z-light-surface-3) !important;
+}
+
+html[data-theme='light'] :is(.hover\:text-white:hover, .hover\:text-slate-100:hover, .hover\:text-zinc-100:hover) {
+  color: var(--z-light-text) !important;
+}
+
+html[data-theme='light'] .hover\:bg-white\/10:hover {
+  background-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+html[data-theme='light'] :is(.hover\:bg-zinc-900:hover, .hover\:bg-zinc-800:hover) {
+  background-color: var(--z-light-surface-2) !important;
+}
+
+html[data-theme='light'] :is(.hover\:text-zinc-100:hover, .hover\:text-zinc-200:hover, .hover\:text-zinc-300:hover) {
+  color: var(--z-light-text) !important;
+}
+
+html[data-theme='light'] .hover\:border-zinc-600:hover {
+  border-color: var(--z-light-border-strong) !important;
+}
+
+html[data-theme='light'] .hover\:text-emerald-100:hover {
+  color: #047857 !important;
+}
+
+html[data-theme='light'] .hover\:text-slate-100:hover {
+  color: var(--z-light-text) !important;
+}
+
+html[data-theme='light'] :is(input, select, textarea) {
+  background-color: var(--z-light-bg) !important;
+  color: var(--z-light-text) !important;
+  border-color: var(--z-light-border-strong) !important;
+}
+
+html[data-theme='light'] input::placeholder,
+html[data-theme='light'] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html[data-theme='light'] :is(.placeholder\:text-zinc-500, .placeholder\:text-zinc-600)::placeholder {
+  color: #94a3b8 !important;
+}
+
+html[data-theme='light'] :is(.placeholder\:text-slate-500)::placeholder {
+  color: #94a3b8 !important;
+}
+
+html[data-theme='light'] :is(
+  .zinesh-frame,
+  .zinesh-frame-modal,
+  .glass-panel,
+  .home-preview-glass
+) {
+  background: var(--z-light-surface) !important;
+  border-color: var(--z-light-border) !important;
+  box-shadow: var(--z-light-shadow) !important;
+}
+
+html[data-theme='light'] .zinesh-frame {
+  --zinesh-corner-color: rgba(15, 23, 42, 0.35);
+  --zinesh-corner-accent: rgba(5, 150, 105, 0.75);
+}
+
+html[data-theme='light'] .home-grid-fade {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+  opacity: 0.5;
+}
+
+html[data-theme='light'] .home-ambient {
+  opacity: 0.25;
+}
+
+html[data-theme='light'] :is(.home-star-dot, .home-shooting-star, .zinesh-star) {
+  opacity: 0.12 !important;
+}
+
+html[data-theme='light'] .home-shooting-star {
+  display: none;
+}
+
+html[data-theme='light'] .home-cta-band {
+  background: rgba(15, 23, 42, 0.02);
+  box-shadow: 0 0 40px -12px rgba(16, 185, 129, 0.2);
+}
+
+html[data-theme='light'] .home-journey-step:hover .home-journey-card {
+  background: rgba(15, 23, 42, 0.03);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+html[data-theme='light'] .notification-bar-panel {
+  background: var(--z-light-bg) !important;
+  border-color: var(--z-light-border) !important;
+  box-shadow: var(--z-light-shadow) !important;
+}
+
+html[data-theme='light'] :is(.bg-black\/40, .bg-black\/60) {
+  background-color: rgba(15, 23, 42, 0.35) !important;
+}
+
+html[data-theme='light'] .teknik-dokuman-page nav a {
+  color: var(--z-light-text-muted) !important;
+}
+
+html[data-theme='light'] .teknik-dokuman-page nav a.text-white {
+  color: var(--z-light-text) !important;
+}
+
+html[data-theme='light'] ::selection {
+  background: rgba(16, 185, 129, 0.25);
+  color: var(--z-light-text);
+}
+
+html[data-theme='light'] :is(.shadow-2xl, .shadow-xl) {
+  box-shadow: var(--z-light-shadow) !important;
+}
+
+html[data-theme='light'] .zinesh-demo-login-btn {
+  color: #92400e !important;
+  background-color: rgba(245, 158, 11, 0.14) !important;
+  border-color: rgba(217, 119, 6, 0.45) !important;
+}
+
+html[data-theme='light'] .zinesh-demo-login-btn:hover:not(:disabled) {
+  background-color: rgba(245, 158, 11, 0.24) !important;
+}
+
+/* Rozetler ve uyarı yüzeyleri */
+html[data-theme='light'] :is(.text-amber-100, .text-amber-200) {
+  color: #92400e !important;
+}
+
+html[data-theme='light'] :is(
+  .border-amber-500\/20,
+  .border-amber-500\/25,
+  .border-amber-500\/30
+) {
+  border-color: rgba(217, 119, 6, 0.45) !important;
+}
+
+html[data-theme='light'] :is(.text-amber-300\/90, .text-amber-300) {
+  color: #b45309 !important;
+}
+
+html[data-theme='light'] :is(
+  .bg-amber-500\/10,
+  .bg-amber-950\/10,
+  .bg-amber-950\/25
+) {
+  background-color: rgba(245, 158, 11, 0.14) !important;
+}
+
+html[data-theme='light'] :is(
+  .bg-emerald-500\/10,
+  .bg-emerald-950\/10,
+  .bg-emerald-950\/15,
+  .bg-emerald-950\/20,
+  .bg-emerald-950\/30
+) {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+}
+
+html[data-theme='light'] :is(
+  .border-emerald-500\/20,
+  .border-emerald-500\/25,
+  .border-emerald-500\/30,
+  .border-emerald-500\/40
+) {
+  border-color: rgba(5, 150, 105, 0.35) !important;
+}
+
+html[data-theme='light'] .bg-red-950\/30 {
+  background-color: rgba(239, 68, 68, 0.08) !important;
+}
+
+html[data-theme='light'] .text-red-400 {
+  color: #dc2626 !important;
+}
+
+/* Landing → AKIŞ kartı: iç adımlar kart gövdesinden ayrışsın */
+html[data-theme='light'] #hero .rounded-2xl.border-slate-800 .grid > div.bg-slate-950 {
+  background-color: var(--z-light-surface-2) !important;
+}
+
+/* Profil kartı üst şerit */
+html[data-theme='light'] #user-profile-panel > div:first-child {
+  background: linear-gradient(
+    to right,
+    rgba(16, 185, 129, 0.1),
+    var(--z-light-surface) 55%,
+    transparent
+  ) !important;
+}
+
+/* Profil kartı alt bilgi şeridi */
+html[data-theme='light'] #user-profile-panel > div:last-child {
+  background-color: var(--z-light-surface-2) !important;
+}
+
+/* Konsol kartları — hafif gölge ile hiyerarşi */
+html[data-theme='light'] #console-pane-bilgilerim > section,
+html[data-theme='light'] #user-profile-panel {
+  box-shadow: var(--z-light-shadow);
+}

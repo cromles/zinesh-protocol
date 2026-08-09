@@ -5,6 +5,10 @@ import DebugPage from './pages/DebugPage.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 import ToasterHost from './components/ToasterHost.tsx';
 import './index.css';
+import './theme-light.css';
+import { initTheme } from './lib/theme';
+
+initTheme();
 
 /** Apex (zinesh.com) API POST'ları CF 301'de path kaybediyor — www'ye zorla. */
 if (typeof window !== 'undefined' && window.location.hostname === 'zinesh.com') {

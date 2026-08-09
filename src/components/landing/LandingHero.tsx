@@ -60,7 +60,7 @@ export default function LandingHero({
               {['Anlaş', 'Bağlan', 'Emanet', 'Teslim', 'Onay'].map((label, i) => (
                 <div
                   key={label}
-                  className={`rounded-lg border p-2 ${i === 4 ? 'col-span-2 border-emerald-500/40 text-emerald-300 sm:col-span-1' : 'border-slate-800 bg-slate-950 text-slate-200'}`}
+                  className={`rounded-lg border p-2 bg-slate-950 ${i === 4 ? 'col-span-2 border-emerald-500/40 text-emerald-300 sm:col-span-1' : 'border-slate-800 text-slate-200'}`}
                 >
                   <span className="mb-0.5 block text-[10px] text-emerald-400">{i + 1}</span>
                   {label}

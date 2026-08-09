@@ -1254,7 +1254,7 @@ export default function LeadModal({
                       type="button"
                       disabled={demoLoading !== null}
                       onClick={() => void handleDemoLogin('employer')}
-                      className="min-h-[44px] rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-100 text-xs font-semibold hover:bg-amber-500/20 disabled:opacity-60"
+                      className="zinesh-demo-login-btn min-h-[44px] rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-100 text-xs font-semibold hover:bg-amber-500/20 disabled:opacity-60"
                     >
                       {demoLoading === 'employer' ? '…' : 'Demo Employer'}
                     </button>
@@ -1262,7 +1262,7 @@ export default function LeadModal({
                       type="button"
                       disabled={demoLoading !== null}
                       onClick={() => void handleDemoLogin('worker')}
-                      className="min-h-[44px] rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-100 text-xs font-semibold hover:bg-amber-500/20 disabled:opacity-60"
+                      className="zinesh-demo-login-btn min-h-[44px] rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-100 text-xs font-semibold hover:bg-amber-500/20 disabled:opacity-60"
                     >
                       {demoLoading === 'worker' ? '…' : 'Demo Worker'}
                     </button>

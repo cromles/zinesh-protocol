@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowLeft, CheckCircle2, Mail, PlusCircle } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
 import UserProfilePanel from './UserProfilePanel';
 import ProfileNameSection from './ProfileNameSection';
 import ProfilePrivacySection from './ProfilePrivacySection';
@@ -76,6 +77,14 @@ export default function ProfileSettingsPanel({
       )}
 
       <UserProfilePanel user={user} />
+
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 sm:p-5" aria-label="Görünüm">
+        <h2 className="text-sm font-semibold text-slate-100">Görünüm</h2>
+        <p className="mt-1 text-xs text-slate-400">Açık veya koyu tema arasında geçiş yapın.</p>
+        <div className="mt-3">
+          <ThemeToggle layout="full" />
+        </div>
+      </section>
 
       <ProfileNameSection
         name={user.name || 'Üye'}

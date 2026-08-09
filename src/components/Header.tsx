@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Menu, X, ArrowRight, ChevronDown, LogOut, LayoutDashboard } from 'lucide-react';
 import ZineshLogo from './ZineshLogo';
+import ThemeToggle from './ThemeToggle';
 import { displayMemberTicket } from '../lib/memberTicket';
 
 interface HeaderProps {
@@ -223,6 +224,7 @@ export default function Header({
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
+          <ThemeToggle />
           {desktopCta}
         </div>
 
@@ -246,6 +248,7 @@ export default function Header({
         }`}
       >
         <div className="flex flex-col gap-4">
+              <ThemeToggle layout="full" />
               {navItems.map((item) => (
                 <a
                   key={item.label}

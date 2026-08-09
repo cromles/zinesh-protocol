@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Bell,
+  Home,
   LayoutDashboard,
   Lock,
   Menu,
@@ -51,7 +52,7 @@ export interface NotificationBarProps {
   hideBar?: boolean;
   panelOpen?: boolean;
   onPanelOpenChange?: (open: boolean) => void;
-  /** Konsol mobil header: hamburger + logo, ana sayfa linki yok */
+  /** Konsol mobil header: hamburger + ana sayfa */
   consoleMobile?: boolean;
   onOpenMenu?: () => void;
 }
@@ -281,7 +282,16 @@ export default function NotificationBar({
               >
                 <Menu className="h-5 w-5" aria-hidden />
               </button>
-              <ZineshLogo size="sm" showText transparentBg pulseGlow={false} interactive={false} className="!h-8 min-w-0" />
+              <button
+                type="button"
+                onClick={onHome}
+                className="inline-flex min-h-10 min-w-0 max-w-[9.5rem] items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900/80 px-2.5 py-2 text-slate-200 transition hover:border-emerald-500/30 hover:text-emerald-100 active:scale-[0.98]"
+                title="Ana sayfa"
+                aria-label="Ana sayfa"
+              >
+                <Home className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+                <span className="truncate text-[11px] font-semibold sm:text-xs">Ana Sayfa</span>
+              </button>
             </>
           ) : (
             <>

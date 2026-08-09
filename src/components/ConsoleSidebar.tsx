@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import ZineshLogo from './ZineshLogo';
+import ThemeToggle from './ThemeToggle';
 import { displayMemberTicket } from '../lib/memberTicket';
 import { formatMoney } from '../lib/currencyFormat';
 import type { ConsolePaneId } from './consolePanelCopy';
@@ -186,7 +187,8 @@ export default function ConsoleSidebar({
         })}
       </nav>
 
-      <div className="border-t border-slate-800 p-3">
+      <div className="border-t border-slate-800 p-3 space-y-2">
+        <ThemeToggle layout="full" />
         <button
           type="button"
           onClick={onLogout}
