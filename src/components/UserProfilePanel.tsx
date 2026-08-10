@@ -168,7 +168,7 @@ export default function UserProfilePanel({ user }: UserProfilePanelProps) {
         <InfoRow
           label="Kimlik doğrulama"
           value={
-            kyc.text ? (
+            kyc ? (
               <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold border ${kyc.className}`}>
                 {kyc.text}
               </span>
