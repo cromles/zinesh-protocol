@@ -45,7 +45,7 @@ import TrustTimeline from './TrustTimeline';
 import CopilotPanel from './CopilotPanel';
 import {
   fetchRoomRiskEngine,
-  riskEngineErrorKind,
+  riskEngineErrorKind as parseRiskEngineErrorKind,
   type RiskEngineErrorKind,
   type RiskObservation,
 } from '../lib/riskEngineApi';
@@ -53,7 +53,18 @@ import { isDemoUiEnabled } from '../lib/demoMode';
 import { displayMemberTicket } from '../lib/memberTicket';
 import { isInsufficientBalanceMessage } from '../lib/insufficientBalance';
 import type { EslesmeSinyal } from '../lib/eslesmeSinyalApi';
-import EscrowDealSummary from './escrow/EscrowDealSummary';
+import {
+  EscrowDealEscrowSection,
+  EscrowDealPeerSection,
+  EscrowDealSevenQuestionsSection,
+  EscrowDealStatusSection,
+  EscrowDisputeRecordSection,
+  EscrowDisputeReviewBlock,
+  EscrowMessagesSectionHeader,
+  EscrowNegotiatingWorkerGuide,
+  EscrowTransientStateBanner,
+  EscrowTrustScoreNote,
+} from './escrow/EscrowDealSummary';
 import {
   CONSOLE_CARD,
   CONSOLE_INPUT,
@@ -196,6 +207,8 @@ export interface EscrowRoomPanelProps {
   canCreateContract?: boolean;
   /** Doğrulama eksikse modal aç */
   onBlockedCreateContract?: () => void;
+  /** Güven puanı profiline git */
+  onViewTrustProfile?: () => void;
 }
 
 function PanelError({
@@ -235,6 +248,7 @@ export default function EscrowRoomPanel({
   onGoToDeposit,
   canCreateContract = true,
   onBlockedCreateContract,
+  onViewTrustProfile,
 }: EscrowRoomPanelProps) {
   const [rooms, setRooms] = useState<EscrowRoom[]>([]);
   const [internalRoomId, setInternalRoomId] = useState<string | null>(null);
@@ -250,6 +264,7 @@ export default function EscrowRoomPanel({
   const [error, setError] = useState('');
   const [showNewConnect, setShowNewConnect] = useState(variant === 'start');
   const [showMessages, setShowMessages] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollMessagesOnNextRender = useRef(false);
   const roomPollKeyRef = useRef('');
@@ -303,7 +318,7 @@ export default function EscrowRoomPanel({
     } catch (err) {
       if (activeRoomIdRef.current !== roomId) return;
       setRiskObservations([]);
-      setRiskEngineErrorKind(riskEngineErrorKind(err));
+      setRiskEngineErrorKind(parseRiskEngineErrorKind(err));
     } finally {
       if (activeRoomIdRef.current === roomId) {
         setRiskEngineLoading(false);
@@ -851,16 +866,15 @@ export default function EscrowRoomPanel({
           <ArrowLeft className="h-4 w-4" /> Listeye dön
         </button>
 
-        <div className={`${CONSOLE_SURFACE} p-5 space-y-2`}>
+        <div className={`${CONSOLE_SURFACE} p-5`}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-lg font-bold text-white">{activeRoom.title || 'İş görüşmesi'}</p>
-              <p className="text-sm text-slate-400">
-                {escrowRoomStatusLabel(activeRoom.status, role)}
-                {activeRoom.agreedAmountTry > 0 && (
-                  <span className="text-white font-semibold"> · {formatMoney(activeRoom.agreedAmountTry)}</span>
-                )}
-              </p>
+              {activeRoom.agreedAmountTry > 0 && (
+                <p className="text-sm text-slate-400 mt-0.5">
+                  <span className="text-white font-semibold">{formatMoney(activeRoom.agreedAmountTry)}</span>
+                </p>
+              )}
             </div>
             <EslesmeSinyalCenter
               sessionToken={getSessionToken() ?? undefined}
@@ -870,19 +884,21 @@ export default function EscrowRoomPanel({
           </div>
         </div>
 
-        <EscrowDealSummary
+        <EscrowDealStatusSection
           room={activeRoom}
           myName={myName}
           availableBalance={availableBalance}
         />
 
-        {isDemoUiEnabled() ? (
-          <EscrowRoomDebugPanel
-            room={activeRoom}
-            availableBalance={availableBalance}
-            workerAction={workerDebugAction}
-          />
-        ) : null}
+        <EscrowDealPeerSection room={activeRoom} />
+
+        <EscrowTransientStateBanner room={activeRoom} />
+
+        {activeRoom.status === 'disputed' && <EscrowDisputeReviewBlock />}
+
+        {isWorker && activeRoom.status === 'negotiating' && (
+          <EscrowNegotiatingWorkerGuide myTicketNumber={myTicketNumber} />
+        )}
 
         <div className="rounded-2xl border border-emerald-500/25 bg-emerald-950/20 p-5 space-y-2">
           <p className="font-mono text-[10px] uppercase tracking-wider text-emerald-400 font-bold">
@@ -923,38 +939,6 @@ export default function EscrowRoomPanel({
             </p>
           )}
         </div>
-
-        <RiskIntelligencePanel
-          observations={riskObservations}
-          loading={riskEngineLoading}
-          errorKind={riskEngineErrorKind}
-          onRetry={() => {
-            if (activeRoom?.id) void loadRiskEngine(activeRoom.id);
-          }}
-        />
-
-        <TrustTimeline
-          observations={riskObservations}
-          loading={riskEngineLoading}
-          errorKind={riskEngineErrorKind}
-          onRetry={() => {
-            if (activeRoom?.id) void loadRiskEngine(activeRoom.id);
-          }}
-        />
-
-        {activeRoom?.id ? (
-          <CopilotPanel
-            roomId={activeRoom.id}
-            observations={riskObservations}
-            loading={riskEngineLoading}
-            errorKind={riskEngineErrorKind}
-            onRetry={() => {
-              if (activeRoom?.id) void loadRiskEngine(activeRoom.id);
-            }}
-          />
-        ) : null}
-
-        <EscrowRoomTimelineView entries={timeline} loading={timelineLoading} />
 
         {error && <PanelError message={error} onGoToDeposit={onGoToDeposit} />}
 
@@ -1062,12 +1046,12 @@ export default function EscrowRoomPanel({
             />
             <textarea
               required
-              rows={5}
+              rows={4}
               minLength={CONTRACT_MIN_CHARS}
               placeholder={`Güncellenmiş sözleşme metni (en az ${CONTRACT_MIN_CHARS} karakter)`}
               value={offerContract}
               onChange={(e) => setOfferContract(e.target.value)}
-              className={`${INPUT} resize-y min-h-[120px] text-sm`}
+              className={`${INPUT} resize-y min-h-[88px] sm:min-h-[120px] text-sm`}
             />
             <input
               type="number"
@@ -1080,7 +1064,7 @@ export default function EscrowRoomPanel({
               }
               className={INPUT}
             />
-            <div className="flex gap-2">
+            <div className="flex gap-2 sticky bottom-0 -mx-5 px-5 py-3 bg-emerald-950/95 backdrop-blur border-t border-emerald-500/20 sm:static sm:mx-0 sm:px-0 sm:py-0 sm:bg-transparent sm:border-0">
               <button type="button" onClick={() => setShowCounterOffer(false)} className="flex-1 py-2 text-sm text-zinc-500 cursor-pointer">
                 Vazgeç
               </button>
@@ -1112,12 +1096,12 @@ export default function EscrowRoomPanel({
             />
             <textarea
               required
-              rows={5}
+              rows={4}
               minLength={CONTRACT_MIN_CHARS}
               placeholder={`Sözleşme metni (en az ${CONTRACT_MIN_CHARS} karakter)\nÖrn: 3 logo taslağı, 2 revizyon, kaynak dosya teslimi, 7 gün.`}
               value={offerContract}
               onChange={(e) => setOfferContract(e.target.value)}
-              className={`${INPUT} resize-y min-h-[120px] text-sm`}
+              className={`${INPUT} resize-y min-h-[88px] sm:min-h-[120px] text-sm`}
             />
             <p className="text-[11px] text-zinc-600 text-right">
               {offerContract.trim().length}/{CONTRACT_MIN_CHARS}
@@ -1134,18 +1118,20 @@ export default function EscrowRoomPanel({
               className={INPUT}
             />
             <p className="text-xs text-zinc-500">Kullanılabilir: {formatMoney(availableBalance)}</p>
-            <button
-              type="submit"
-              disabled={
-                offerLoading ||
-                offerAmount === '' ||
-                offerAmount > availableBalance ||
-                offerContract.trim().length < CONTRACT_MIN_CHARS
-              }
-              className="w-full min-h-[52px] rounded-2xl bg-white text-black font-bold disabled:opacity-50 cursor-pointer"
-            >
-              {offerLoading ? 'Gönderiliyor…' : 'Sözleşmeyi gönder'}
-            </button>
+            <div className="sticky bottom-0 -mx-5 px-5 py-3 bg-slate-950/95 backdrop-blur border-t border-slate-800 sm:static sm:mx-0 sm:px-0 sm:py-0 sm:bg-transparent sm:border-0">
+              <button
+                type="submit"
+                disabled={
+                  offerLoading ||
+                  offerAmount === '' ||
+                  offerAmount > availableBalance ||
+                  offerContract.trim().length < CONTRACT_MIN_CHARS
+                }
+                className="w-full min-h-[52px] rounded-2xl bg-white text-black font-bold disabled:opacity-50 cursor-pointer"
+              >
+                {offerLoading ? 'Gönderiliyor…' : 'Sözleşmeyi gönder'}
+              </button>
+            </div>
           </form>
         )}
 
@@ -1160,6 +1146,8 @@ export default function EscrowRoomPanel({
             {alreadyConfirmed ? 'Onayınız alındı' : confirmLoading ? '…' : 'İş bitti — onayla'}
           </button>
         )}
+
+        <EscrowDealEscrowSection room={activeRoom} />
 
         {isDone && (
           <p className="text-sm text-center text-zinc-400 py-2">
@@ -1222,68 +1210,125 @@ export default function EscrowRoomPanel({
           </form>
         )}
 
-        <button
-          type="button"
-          onClick={() => {
-            setShowMessages((v) => {
-              const next = !v;
-              if (next) scrollMessagesOnNextRender.current = true;
-              return next;
-            });
-          }}
-          className="w-full flex items-center justify-between text-sm text-zinc-500 py-2 cursor-pointer"
-        >
-          Mesajlar {messages.length > 0 ? `(${messages.length})` : ''}
-          <ChevronDown className={`h-4 w-4 transition ${showMessages ? 'rotate-180' : ''}`} />
-        </button>
-
-        {showMessages && (
-          <>
-            <div className="rounded-2xl border border-zinc-800 bg-[#09090e] p-3 max-h-48 overflow-y-auto space-y-2">
-              {messages.length === 0 ? (
-                <p className="text-xs text-zinc-600 text-center py-4">Mesaj yok</p>
-              ) : (
-                messages.map((m) => (
-                  <p key={m.id} className={`text-sm ${m.type === 'system' ? 'text-zinc-500 text-xs text-center' : 'text-zinc-300'}`}>
-                    {m.type !== 'system' && <span className="text-zinc-600 text-xs">{m.name}: </span>}
-                    {m.body}
-                  </p>
-                ))
+        <div className="space-y-2">
+          <EscrowMessagesSectionHeader
+            messageCount={messages.length}
+            expanded={showMessages}
+            onToggle={() => {
+              setShowMessages((v) => {
+                const next = !v;
+                if (next) scrollMessagesOnNextRender.current = true;
+                return next;
+              });
+            }}
+          />
+          {showMessages && (
+            <>
+              <div className="rounded-2xl border border-zinc-800 bg-[#09090e] p-3 max-h-48 overflow-y-auto space-y-2">
+                {messages.length === 0 ? (
+                  <p className="text-xs text-zinc-600 text-center py-4">Henüz mesaj yok — karşı tarafa yazabilirsiniz</p>
+                ) : (
+                  messages.map((m) => (
+                    <p key={m.id} className={`text-sm ${m.type === 'system' ? 'text-zinc-500 text-xs text-center' : 'text-zinc-300'}`}>
+                      {m.type !== 'system' && <span className="text-zinc-600 text-xs">{m.name}: </span>}
+                      {m.body}
+                    </p>
+                  ))
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+              {!isDone && (
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!messageBody.trim() || !activeRoomId) return;
+                  setSendLoading(true);
+                  try {
+                    const { room, messages: msgs } = await sendEscrowRoomMessage(activeRoomId, messageBody.trim());
+                    roomPollKeyRef.current = roomPollKey(room);
+                    messagesPollKeyRef.current = messagesPollKey(msgs);
+                    setActiveRoom(room);
+                    setMessages(msgs);
+                    setMessageBody('');
+                    scrollMessagesOnNextRender.current = true;
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Gönderilemedi.');
+                  } finally {
+                    setSendLoading(false);
+                  }
+                }} className="flex gap-2">
+                  <input
+                    value={messageBody}
+                    onChange={(e) => setMessageBody(e.target.value)}
+                    placeholder="Mesaj…"
+                    className={`${INPUT} flex-1 text-sm min-h-[44px]`}
+                  />
+                  <button type="submit" disabled={sendLoading || !messageBody.trim()} className="shrink-0 px-4 rounded-xl bg-zinc-800 text-white cursor-pointer disabled:opacity-50">
+                    <Send className="h-4 w-4" />
+                  </button>
+                </form>
               )}
-              <div ref={messagesEndRef} />
-            </div>
-            {!isDone && (
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                if (!messageBody.trim() || !activeRoomId) return;
-                setSendLoading(true);
-                try {
-                  const { room, messages: msgs } = await sendEscrowRoomMessage(activeRoomId, messageBody.trim());
-                  roomPollKeyRef.current = roomPollKey(room);
-                  messagesPollKeyRef.current = messagesPollKey(msgs);
-                  setActiveRoom(room);
-                  setMessages(msgs);
-                  setMessageBody('');
-                  scrollMessagesOnNextRender.current = true;
-                } catch (err) {
-                  setError(err instanceof Error ? err.message : 'Gönderilemedi.');
-                } finally {
-                  setSendLoading(false);
-                }
-              }} className="flex gap-2">
-                <input
-                  value={messageBody}
-                  onChange={(e) => setMessageBody(e.target.value)}
-                  placeholder="Mesaj…"
-                  className={`${INPUT} flex-1 text-sm min-h-[44px]`}
+            </>
+          )}
+        </div>
+
+        <EscrowTrustScoreNote onViewTrustProfile={onViewTrustProfile} />
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/50 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left cursor-pointer hover:bg-slate-900/50 transition"
+          >
+            <span className="text-sm font-semibold text-slate-300">Gelişmiş bilgiler</span>
+            <ChevronDown className={`h-4 w-4 text-slate-500 transition ${showAdvanced ? 'rotate-180' : ''}`} />
+          </button>
+          {showAdvanced && (
+            <div className="px-4 pb-4 space-y-4 border-t border-slate-800 pt-4">
+              <EscrowDealSevenQuestionsSection
+                room={activeRoom}
+                myName={myName}
+                availableBalance={availableBalance}
+              />
+              <RiskIntelligencePanel
+                observations={riskObservations}
+                loading={riskEngineLoading}
+                errorKind={riskEngineErrorKind}
+                onRetry={() => {
+                  if (activeRoom?.id) void loadRiskEngine(activeRoom.id);
+                }}
+              />
+              <TrustTimeline
+                observations={riskObservations}
+                loading={riskEngineLoading}
+                errorKind={riskEngineErrorKind}
+                onRetry={() => {
+                  if (activeRoom?.id) void loadRiskEngine(activeRoom.id);
+                }}
+              />
+              {activeRoom?.id ? (
+                <CopilotPanel
+                  roomId={activeRoom.id}
+                  observations={riskObservations}
+                  loading={riskEngineLoading}
+                  errorKind={riskEngineErrorKind}
+                  onRetry={() => {
+                    if (activeRoom?.id) void loadRiskEngine(activeRoom.id);
+                  }}
                 />
-                <button type="submit" disabled={sendLoading || !messageBody.trim()} className="shrink-0 px-4 rounded-xl bg-zinc-800 text-white cursor-pointer disabled:opacity-50">
-                  <Send className="h-4 w-4" />
-                </button>
-              </form>
-            )}
-          </>
-        )}
+              ) : null}
+              <EscrowRoomTimelineView entries={timeline} loading={timelineLoading} />
+              <EscrowDisputeRecordSection room={activeRoom} />
+            </div>
+          )}
+        </div>
+
+        {isDemoUiEnabled() ? (
+          <EscrowRoomDebugPanel
+            room={activeRoom}
+            availableBalance={availableBalance}
+            workerAction={workerDebugAction}
+          />
+        ) : null}
 
         {loading && <p className="text-xs text-zinc-600 text-center">Güncelleniyor…</p>}
       </div>

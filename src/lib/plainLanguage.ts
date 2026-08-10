@@ -11,12 +11,12 @@ export const ZINESH_ONE_LINER =
 export const ESCROW_ONLY_TAGLINE =
   'Pazar yeri değiliz — anlaşmanızın yazılı kaydı ve güvenli kasasıyız.';
 
-/** Emanet odasında taraflar — arayüz (API rolü: employer=alıcı, worker=satıcı). */
+/** Emanet odasında taraflar — arayüz (API: employer / worker değişmez). */
 export const ESCROW_PARTY = {
-  employer: 'Alıcı',
-  worker: 'Satıcı',
-  employerBtn: 'Ben alıcıyım',
-  workerBtn: 'Ben satıcıyım',
+  employer: 'İşveren',
+  worker: 'İş Alan',
+  employerBtn: 'Ben işverenim',
+  workerBtn: 'Ben iş alanım',
 } as const;
 
 export const BUYER_FEAR =
@@ -49,7 +49,7 @@ export const SIMPLE_START_STEPS = [
   {
     emoji: '1️⃣',
     title: 'Eşleş',
-    text: 'Karşı tarafın üye numarasını girin. Alıcı veya satıcı olarak bağlanın.',
+    text: 'Karşı tarafın üye numarasını girin. İşveren veya iş alan olarak bağlanın.',
   },
   {
     emoji: '2️⃣',

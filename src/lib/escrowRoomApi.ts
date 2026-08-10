@@ -325,10 +325,10 @@ export function escrowRoomStatusLabel(status: EscrowRoomStatus, role?: EscrowRoo
   const map: Record<EscrowRoomStatus, string> = {
     negotiating: 'Görüşmede',
     terms_pending: 'Teklif aşamasında',
-    locking: 'Kilitleniyor…',
+    locking: 'Emanet kilitleniyor…',
     locked: 'Kilitli — iş devam ediyor',
     completion_pending: 'Tamamlama onayı',
-    settling: 'Ödeme işleniyor…',
+    settling: 'Emanet sonuçlandırılıyor…',
     completed: 'Tamamlandı',
     cancelled: 'İptal edildi',
     disputed: 'Şikayet açık',
@@ -350,7 +350,7 @@ export function escrowRoomNextAction(room: EscrowRoom): {
     return { hint: 'Tutar ve iş detayını girip teklif gönderin.', cta: 'Teklif ver', urgent: true };
   }
   if (room.status === 'negotiating' && role === 'worker') {
-    return { hint: 'İş veren teklif gönderecek.', urgent: false };
+    return { hint: 'Karşı taraftan şartlar bekleniyor.', urgent: false };
   }
   if (room.status === 'terms_pending' && role === 'worker' && room.agreedAmountTry > 0) {
     if (room.termsProposedBy === 'worker') {

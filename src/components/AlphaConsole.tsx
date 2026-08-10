@@ -593,6 +593,7 @@ export default function AlphaConsole({
                 });
               }}
               onGoToDeposit={goToDeposit}
+              onViewTrustProfile={() => goToPane('bilgilerim')}
             />
           </div>
         )}
@@ -616,6 +617,7 @@ export default function AlphaConsole({
                 });
               }}
               onGoToDeposit={goToDeposit}
+              onViewTrustProfile={() => goToPane('bilgilerim')}
             />
           </div>
         )}

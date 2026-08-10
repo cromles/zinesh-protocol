@@ -12,7 +12,7 @@ interface ConsoleActionCardsProps {
 const CARD_DETAILS: Record<string, { description: string; hint: string }> = {
   'hizmet-al': {
     description: 'Karşı tarafın üye numarasıyla yazılı sözleşme başlat. Rolünü seç, şartları kilitle.',
-    hint: 'Alıcı veya satıcı',
+    hint: 'İşveren veya iş alan',
   },
   sozlesmelerim: {
     description: 'Devam eden, onay bekleyen ve tamamlanan tüm sözleşmelerin tek listede.',

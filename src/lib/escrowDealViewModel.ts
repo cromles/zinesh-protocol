@@ -83,14 +83,14 @@ export function buildEscrowSevenQuestions(
       return 'Para henüz emanet sürecine alınmadı.';
     }
     if (room.status === 'locking') {
-      return 'Tutar kilitleniyor — işlem tamamlanana kadar bekleyin.';
+      return 'Anlaşma şartları onaylandı. Emanet tutarı güvence altına alınıyor.';
     }
     if (room.status === 'locked' || room.status === 'completion_pending') {
       const locked = room.employerLockedTry > 0 ? room.employerLockedTry : room.agreedAmountTry;
       return `Emanet sürecinde kilitli: ${formatMoney(locked)}. Onay öncesi serbest bırakılmaz.`;
     }
     if (room.status === 'settling') {
-      return 'Ödeme işleniyor — backend onayı bekleniyor.';
+      return 'Anlaşmanın tamamlanması için son işlem gerçekleştiriliyor.';
     }
     if (room.status === 'completed') {
       return 'İş tamamlandı; ödeme backend kayıtlarına göre sonuçlandı.';
@@ -207,6 +207,32 @@ export function escrowTermsPendingBanner(room: EscrowRoom): string | null {
   }
   return 'Şartlar henüz kesinleşmedi. Para henüz kilitlenmedi.';
 }
+
+export const ESCROW_DISPUTE_REVIEW_COPY = {
+  title: 'İnceleme süreci devam ediyor',
+  description: 'Bu anlaşma için bir sorun bildirildi. Anlaşma şu anda inceleme sürecinde.',
+  nextStep:
+    'Şu anda sizin yapmanız gereken bir işlem yok. İnceleme tamamlandığında anlaşmanın sonucu burada gösterilecek.',
+  authority: 'Anlaşmanın sonucu yetkili yönetici tarafından belirlenir.',
+} as const;
+
+export const ESCROW_NEGOTIATING_WORKER_COPY = {
+  title: 'Karşı taraftan şartlar bekleniyor',
+  description: 'Anlaşmanın şartlarını işveren gönderecek.',
+  guidance:
+    "ZN-ID'nizi karşı tarafla paylaşarak anlaşmayı başlatabilirsiniz. Şartlar gönderildiğinde burada görüntülenecek.",
+} as const;
+
+export const ESCROW_TRANSIENT_STATE_COPY = {
+  locking: {
+    title: 'Emanet kilitleniyor…',
+    description: 'Anlaşma şartları onaylandı. Emanet tutarı güvence altına alınıyor.',
+  },
+  settling: {
+    title: 'Emanet sonuçlandırılıyor…',
+    description: 'Anlaşmanın tamamlanması için son işlem gerçekleştiriliyor.',
+  },
+} as const;
 
 export function escrowPeerCard(room: EscrowRoom): {
   name: string;
