@@ -777,9 +777,7 @@ if ($action === 'verify_email_code') {
 
     zinesh_json_response([
         'ok' => true,
-        'message' => !empty($grant['claimed'])
-            ? ((int)$grant['amount'] . ' FİZİ kurucu kayıt ödülün hesabına yazıldı.')
-            : 'E-posta adresin doğrulandı.',
+        'message' => 'E-posta adresin doğrulandı.',
         'user' => zinesh_email_sanitize_public_user(array_merge($outUser, [
             'campaign' => zinesh_campaign_user_progress($user),
         ])),
@@ -820,9 +818,7 @@ if ($action === 'verify_email') {
 
     zinesh_json_response([
         'ok' => true,
-        'message' => !empty($grant['claimed'])
-            ? ((int)$grant['amount'] . ' FİZİ kurucu kayıt ödülün hesabına yazıldı.')
-            : 'E-posta adresin doğrulandı.',
+        'message' => 'E-posta adresin doğrulandı.',
         'user' => zinesh_email_sanitize_public_user(array_merge($outUser, [
             'campaign' => zinesh_campaign_user_progress($user),
         ])),

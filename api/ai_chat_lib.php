@@ -9,6 +9,10 @@ require_once __DIR__ . '/founder_health_lib.php';
 require_once __DIR__ . '/early_access_lib.php';
 require_once __DIR__ . '/tl_mode_lib.php';
 
+function zinesh_ai_product_focus_reply(): string {
+    return 'Zinesh şu anda TL ve emanet tabanlı güvenli anlaşma akışına odaklanmaktadır. Cüzdan, yatırma ve emanet işlemleri için konsolu kullanabilirsin.';
+}
+
 function zinesh_ai_guided_actions(): array {
     return [
         'depositUsdt' => [
@@ -20,26 +24,6 @@ function zinesh_ai_guided_actions(): array {
                 'Ağ seç (TRON, Arbitrum, Ethereum veya Solana).',
                 'Ekrandaki kasa adresine USDT gönder.',
                 'İşlem hash\'ini gir veya otomatik eşleşmeyi bekle.',
-            ],
-        ],
-        'buyFizi' => [
-            'title' => 'FİZİ alma',
-            'steps' => [
-                'Konsolda Cüzdanım bölümüne git.',
-                'Takas sekmesini aç.',
-                'FİZİ Al modunu seç.',
-                'USDT miktarını gir.',
-                'Onayla — komisyon düşülür, FİZİ bakiyene yazılır.',
-            ],
-        ],
-        'sellFizi' => [
-            'title' => 'FİZİ satma',
-            'steps' => [
-                'Konsolda Cüzdanım → Takas → FİZİ Sat.',
-                'Erken erişimde: en az 1 USDT yatırım + 3 doğrulanmış referans gerekir.',
-                'Kampanya FİZİ\'si şartlar sağlanana kadar satılamayabilir; satılabilir bakiye ayrı gösterilir.',
-                'Escrow\'da kilitli USDT satın alma için kullanılamaz.',
-                'Minimum takas tutarı erken erişim kurallarına bağlıdır.',
             ],
         ],
     ];
@@ -132,22 +116,18 @@ function zinesh_ai_sell_diagnosis(array $user): array {
     if ($totalFizi <= 0) {
         $reasons[] = [
             'code' => 'no_fizi',
-            'message' => 'FİZİ bakiyeniz 0.',
+            'message' => 'Bu işlem şu an kullanılamıyor.',
         ];
     } elseif ($sellable <= 0 && $gate['allowed']) {
         if ($campaign > 0 && $purchased <= 0 && !zinesh_campaign_fizi_sellable()) {
             $reasons[] = [
                 'code' => 'campaign_locked',
-                'message' => sprintf(
-                    'Toplam %s FİZİ\'nin tamamı kampanya ödülü (%s). Satılabilir satın alınmış FİZİ yok.',
-                    zinesh_ai_format_num($totalFizi, 0),
-                    zinesh_ai_format_num($campaign, 0)
-                ),
+                'message' => 'Bu işlem şu an kullanılamıyor.',
             ];
         } else {
             $reasons[] = [
                 'code' => 'not_sellable',
-                'message' => 'Satılabilir FİZİ bakiyeniz 0.',
+                'message' => 'Bu işlem şu an kullanılamıyor.',
             ];
         }
     }
@@ -156,7 +136,7 @@ function zinesh_ai_sell_diagnosis(array $user): array {
         $reasons[] = [
             'code' => 'escrow_locked_usdt',
             'message' => sprintf(
-                '%s USDT escrow\'da kilitli — FİZİ alımında kullanılamaz (kullanılabilir USDT daha düşük).',
+                '%s USDT emanet hesabında kilitli — kullanılabilir bakiye daha düşük olabilir.',
                 zinesh_ai_format_num($escrow, 2)
             ),
         ];
@@ -266,14 +246,9 @@ function zinesh_ai_founder_health_context(): array {
 function zinesh_ai_default_suggestions(bool $loggedIn, bool $isFounder, string $topic = 'general'): array {
     $suggestions = [];
 
-    if ($topic === 'wallet' || $topic === 'buy') {
+    if ($topic === 'wallet' || $topic === 'buy' || $topic === 'sell') {
         if ($loggedIn) {
-            $suggestions[] = ['label' => 'FİZİ satın alma ekranını aç', 'action' => 'open_fizi_buy'];
-        }
-    }
-    if ($topic === 'wallet' || $topic === 'sell') {
-        if ($loggedIn) {
-            $suggestions[] = ['label' => 'FİZİ satış ekranını aç', 'action' => 'open_fizi_sell'];
+            $suggestions[] = ['label' => 'Cüzdan ve yatırma', 'action' => 'open_deposit'];
         }
     }
     if ($topic === 'deposit' || $topic === 'wallet' || $topic === 'buy') {
@@ -310,22 +285,10 @@ function zinesh_ai_try_direct_answer(string $question, ?array $user, bool $isFou
     $loggedIn = $user !== null;
     $wallet = zinesh_ai_wallet_context($user);
 
-    if (preg_match('/kac\s+fizi|fizi.*(m\s*var|im\s*var|bakiy)/u', $q)) {
-        if (!$loggedIn) {
-            return [
-                'reply' => 'Kişisel FİZİ bakiyenizi görmek için giriş yapıp konsola geçmeniz gerekir.',
-                'suggestions' => zinesh_ai_default_suggestions(false, false, 'wallet'),
-            ];
-        }
-        $bal = (float)($wallet['fiziBalance'] ?? 0);
-        $sell = (float)($wallet['sellableFiziBalance'] ?? 0);
+    if (preg_match('/kac\s+fizi|fizi.*(m\s*var|im\s*var|bakiy)|satilabilir\s+fizi/u', $q)) {
         return [
-            'reply' => sprintf(
-                'FİZİ bakiyeniz: %s FİZİ. Satılabilir: %s FİZİ.',
-                zinesh_ai_format_num($bal, 2),
-                zinesh_ai_format_num($sell, 2)
-            ),
-            'suggestions' => zinesh_ai_default_suggestions(true, $isFounder, 'wallet'),
+            'reply' => zinesh_ai_product_focus_reply(),
+            'suggestions' => zinesh_ai_default_suggestions($loggedIn, $isFounder, 'wallet'),
         ];
     }
 
@@ -348,74 +311,23 @@ function zinesh_ai_try_direct_answer(string $question, ?array $user, bool $isFou
         ];
     }
 
-    if (preg_match('/satilabilir\s+fizi/u', $q)) {
-        if (!$loggedIn) {
-            return [
-                'reply' => 'Satılabilir FİZİ miktarı için giriş yapın.',
-                'suggestions' => zinesh_ai_default_suggestions(false, false, 'sell'),
-            ];
-        }
-        $sell = (float)($wallet['sellableFiziBalance'] ?? 0);
-        return [
-            'reply' => sprintf('Satılabilir FİZİ miktarınız: %s FİZİ.', zinesh_ai_format_num($sell, 2)),
-            'suggestions' => zinesh_ai_default_suggestions(true, $isFounder, 'sell'),
-        ];
-    }
-
     if (preg_match('/(\d+(?:[.,]\d+)?)\s*usdt/u', $q, $m) && preg_match('/fizi|kac|alabilir/u', $q)) {
-        $amount = (float)str_replace(',', '.', $m[1]);
-        if ($amount > 0) {
-            $calc = zinesh_ai_calc_fizi_from_usdt($amount);
-            $price = (float)$calc['currentPriceUsdt'];
-            $fizi = (float)$calc['fiziReceived'];
-            $fee = (float)$calc['feeUsdt'];
-            $feeRatePct = round((float)$calc['feeRate'] * 100, 2);
-            $extra = !empty($calc['partialDueToPool'])
-                ? ' Satış havuzu sınırı nedeniyle kısmi alım gerekebilir.'
-                : '';
-            return [
-                'reply' => sprintf(
-                    'Güncel fiyat: $%s / FİZİ. %s USDT ile (%%%s komisyon = $%s) %s FİZİ alınır.%s',
-                    zinesh_ai_format_num($price, 6),
-                    zinesh_ai_format_num($amount, 2),
-                    zinesh_ai_format_num($feeRatePct, 2),
-                    zinesh_ai_format_num($fee, 2),
-                    zinesh_ai_format_num($fizi, 2),
-                    $extra
-                ),
-                'suggestions' => zinesh_ai_default_suggestions($loggedIn, $isFounder, 'buy'),
-            ];
-        }
+        return [
+            'reply' => zinesh_ai_product_focus_reply(),
+            'suggestions' => zinesh_ai_default_suggestions($loggedIn, $isFounder, 'wallet'),
+        ];
     }
 
     if (preg_match('/neden.*(satam|satis.*(yapam|olmu)|satış)/u', $q)) {
         if (!$loggedIn) {
             return [
-                'reply' => 'Satış engeli kişisel bakiyenize bağlıdır — giriş yapın.',
-                'suggestions' => zinesh_ai_default_suggestions(false, false, 'sell'),
+                'reply' => 'Hesap durumunu görmek için giriş yapın.',
+                'suggestions' => zinesh_ai_default_suggestions(false, false, 'wallet'),
             ];
         }
-        $diag = is_array($wallet['sellDiagnosis'] ?? null) ? $wallet['sellDiagnosis'] : zinesh_ai_sell_diagnosis($user);
-        if (!empty($diag['canSell'])) {
-            return [
-                'reply' => sprintf(
-                    'Satış engeliniz görünmüyor. Satılabilir: %s FİZİ. Takas → FİZİ Sat ekranından deneyin.',
-                    zinesh_ai_format_num((float)($diag['sellableFizi'] ?? 0), 2)
-                ),
-                'suggestions' => zinesh_ai_default_suggestions(true, $isFounder, 'sell'),
-            ];
-        }
-        $primary = (string)($diag['primaryReason'] ?? 'Satılabilir FİZİ bakiyeniz yok.');
-        $bal = is_array($diag['balances'] ?? null) ? $diag['balances'] : [];
-        $detail = sprintf(
-            'Kampanya FİZİ: %s · Satın alınmış: %s · Escrow USDT: %s.',
-            zinesh_ai_format_num((float)($bal['campaignFiziBalance'] ?? 0), 0),
-            zinesh_ai_format_num((float)($bal['purchasedFiziBalance'] ?? 0), 0),
-            zinesh_ai_format_num((float)($bal['escrowBalance'] ?? 0), 2)
-        );
         return [
-            'reply' => $primary . ' ' . $detail,
-            'suggestions' => zinesh_ai_default_suggestions(true, $isFounder, 'sell'),
+            'reply' => zinesh_ai_product_focus_reply(),
+            'suggestions' => zinesh_ai_default_suggestions(true, $isFounder, 'wallet'),
         ];
     }
 
@@ -477,27 +389,10 @@ function zinesh_ai_try_direct_answer(string $question, ?array $user, bool $isFou
         ];
     }
 
-    if (preg_match('/nasil.*fizi.*(al|satin)|fizi.*nasil.*(al|satin)/u', $q)) {
-        $steps = zinesh_ai_guided_actions()['buyFizi']['steps'];
+    if (preg_match('/nasil.*fizi.*(al|satin)|fizi.*nasil.*(al|satin)|nasil.*fizi.*sat|fizi.*nasil.*sat|neden.*fizi.*satam/u', $q)) {
         return [
-            'reply' => "FİZİ alma:\n" . implode("\n", array_map(
-                static fn($s, $i) => ($i + 1) . '. ' . $s,
-                $steps,
-                array_keys($steps)
-            )),
-            'suggestions' => zinesh_ai_default_suggestions($loggedIn, $isFounder, 'buy'),
-        ];
-    }
-
-    if (preg_match('/nasil.*fizi.*sat|fizi.*nasil.*sat|neden.*fizi.*satam/u', $q)) {
-        $steps = zinesh_ai_guided_actions()['sellFizi']['steps'];
-        return [
-            'reply' => "FİZİ satış kuralları:\n" . implode("\n", array_map(
-                static fn($s, $i) => ($i + 1) . '. ' . $s,
-                $steps,
-                array_keys($steps)
-            )),
-            'suggestions' => zinesh_ai_default_suggestions($loggedIn, $isFounder, 'sell'),
+            'reply' => zinesh_ai_product_focus_reply(),
+            'suggestions' => zinesh_ai_default_suggestions($loggedIn, $isFounder, 'wallet'),
         ];
     }
 
@@ -509,20 +404,15 @@ function zinesh_ai_try_direct_answer(string $question, ?array $user, bool $isFou
     }
 
     if (preg_match('/zinesh\s*(nedir|ne\b)|nedir.*zinesh|guven\s*protokol/u', $q)) {
-        $protocol = zinesh_ai_protocol_context();
-        $price = (float)($protocol['currentPriceUsdt'] ?? 0);
         return [
-            'reply' => sprintf(
-                'Zinesh, tanımadığınız kişilerle güvenli iş yapmanızı sağlayan bir protokoldür. Ödeme kasada bekler; anlaşmazlıkta hakemler devreye girer. Güncel FİZİ fiyatı: $%s / FİZİ.',
-                zinesh_ai_format_num($price, 6)
-            ),
+            'reply' => 'Zinesh, tanımadığınız kişilerle güvenli iş yapmanızı sağlayan bir protokoldür. Ödeme emanet hesabında bekler; anlaşmazlıkta hakemler devreye girer.',
             'suggestions' => zinesh_ai_default_suggestions($loggedIn, $isFounder, 'general'),
         ];
     }
 
     if (preg_match('/merhaba|selam|hey\b/u', $q)) {
         return [
-            'reply' => 'Merhaba! Bakiye, USDT yatırma, FİZİ alım/satım veya protokol hakkında sorularınızı yazabilirsiniz.',
+            'reply' => 'Merhaba! Bakiye, USDT yatırma, emanet veya protokol hakkında sorularınızı yazabilirsiniz.',
             'suggestions' => zinesh_ai_default_suggestions($loggedIn, $isFounder, 'general'),
         ];
     }
@@ -547,8 +437,8 @@ function zinesh_ai_offline_fallback(string $question, ?array $user, bool $isFoun
     }
     if (preg_match('/fizi|takas|swap/u', $q)) {
         return [
-            'reply' => 'FİZİ alım/satım ve bakiye sorularını canlı veriden yanıtlayabilirim. Örnek: "Kaç FİZİ\'m var?" veya "100 USDT ile kaç FİZİ alabilirim?"',
-            'suggestions' => zinesh_ai_default_suggestions($loggedIn, $isFounder, 'buy'),
+            'reply' => zinesh_ai_product_focus_reply(),
+            'suggestions' => zinesh_ai_default_suggestions($loggedIn, $isFounder, 'wallet'),
         ];
     }
 

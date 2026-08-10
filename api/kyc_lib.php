@@ -108,7 +108,7 @@ function zinesh_kyc_submit(string $uid, array $input): array {
         return [
             'ok' => true,
             'message' => !empty($grant['claimed'])
-                ? ((int)$grant['amount'] . ' FİZİ KYC ödülün hesabına yazıldı.')
+                ? 'Kimlik doğrulaman tamamlandı.'
                 : 'KYC zaten onaylı.',
             'user' => $user,
             'grant' => $grant,
@@ -121,7 +121,7 @@ function zinesh_kyc_submit(string $uid, array $input): array {
     }
 
     if (empty($user['foundingMember'])) {
-        return ['ok' => false, 'message' => 'Kurucu kayıt ödülün tamamlanmadan KYC yapılamaz.', 'user' => null, 'grant' => null, 'reason' => 'not_founding_member'];
+        return ['ok' => false, 'message' => 'Kimlik doğrulama için önce hesap kurulum adımlarını tamamla.', 'user' => null, 'grant' => null, 'reason' => 'not_founding_member'];
     }
 
     $fullName = trim((string)($input['fullName'] ?? ''));
@@ -178,14 +178,14 @@ function zinesh_kyc_submit(string $uid, array $input): array {
     if (!($claim['claimed'] ?? false)) {
         $reason = (string)($claim['reason'] ?? 'claim_failed');
         $messages = [
-            'already_claimed' => 'KYC ödülü zaten alındı.',
-            'pool_depleted' => 'Kampanya havuzu tükendi.',
-            'not_founding_member' => 'Kurucu üye değilsin.',
+            'already_claimed' => 'Kimlik doğrulama adımı zaten tamamlanmış.',
+            'pool_depleted' => 'Kimlik doğrulama şu an kullanılamıyor. Daha sonra tekrar dene.',
+            'not_founding_member' => 'Kimlik doğrulama için önce hesap kurulum adımlarını tamamla.',
             'kyc_not_approved' => 'KYC onayı tamamlanamadı.',
         ];
         return [
             'ok' => false,
-            'message' => $messages[$reason] ?? 'KYC ödülü şu an verilemedi.',
+            'message' => $messages[$reason] ?? 'Kimlik doğrulama şu an tamamlanamadı. Daha sonra tekrar dene.',
             'user' => $user,
             'grant' => $claim,
             'reason' => $reason,
@@ -194,7 +194,7 @@ function zinesh_kyc_submit(string $uid, array $input): array {
 
     return [
         'ok' => true,
-        'message' => ((int)$claim['amount']) . ' FİZİ KYC ödülün hesabına yazıldı.',
+        'message' => 'Kimlik doğrulama başvurun alındı.',
         'user' => $user,
         'grant' => $claim,
         'reason' => null,

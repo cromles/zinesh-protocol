@@ -262,7 +262,6 @@ function zinesh_send_mail(string $to, string $subject, string $htmlBody, string 
 }
 
 function zinesh_send_verification_code_email(string $email, string $name, string $code): bool {
-    $reward = (int)(zinesh_campaign_rewards_map()['founding_signup'] ?? 100);
     $safeName = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
     $safeCode = htmlspecialchars($code, ENT_QUOTES, 'UTF-8');
 
@@ -277,26 +276,24 @@ function zinesh_send_verification_code_email(string $email, string $name, string
         <tr><td>
           <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.12em;color:#a78bfa;text-transform:uppercase;">Zinesh Güven Protokolü</p>
           <p style="margin:0 0 16px;font-size:18px;line-height:1.5;color:#fff;font-weight:600;">
-            Aramıza hoş geldin sevgili {$safeName}.
-          </p>
-          <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:#a1a1aa;">
-            Güvene dayalı dijital ekonomi protokolümüz artık hizmetindedir.
+            Hoş geldin {$safeName}.
           </p>
           <p style="margin:0 0 20px;font-size:14px;line-height:1.7;color:#a1a1aa;">
-            Doğrulama sonrası kurucu görevlerine başlarsın: her görev
-            <strong style="color:#fbbf24;">+{$reward} FİZİ</strong>.
-            Beş görev bitince toplam <strong style="color:#fbbf24;">500 FİZİ</strong> cüzdanına geçer.
-            FİZİ uygulama içi avantajlar içindir; çekilemez.
+            Zinesh'e katıldığın için teşekkür ederiz.
           </p>
-          <p style="margin:0 0 12px;font-size:13px;line-height:1.6;color:#a1a1aa;text-align:center;">
-            Doğrulama kodun:
+          <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#a1a1aa;text-align:center;">
+            Hesabını doğrulamak için aşağıdaki kodu kullan:
           </p>
           <p style="margin:24px 0;text-align:center;font-size:36px;font-weight:bold;letter-spacing:0.35em;color:#f59e0b;font-family:monospace;">
             {$safeCode}
           </p>
-          <p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#71717a;text-align:center;">
-            Kod 15 dakika geçerlidir. Sorun yaşarsan bu e-postayı yanıtlayabilirsin, yardımcı olmaktan memnuniyet duyarız.
+          <p style="margin:0 0 16px;font-size:13px;line-height:1.6;color:#a1a1aa;text-align:center;">
+            Bu kod 15 dakika boyunca geçerlidir.
           </p>
+          <p style="margin:0;font-size:12px;line-height:1.6;color:#71717a;text-align:center;">
+            Bu işlemi sen başlatmadıysan bu e-postayı dikkate alabilirsin.
+          </p>
+          <p style="margin:24px 0 0;font-size:11px;line-height:1.6;color:#52525b;text-align:center;">Zinesh</p>
         </td></tr>
       </table>
     </td></tr>
@@ -305,11 +302,14 @@ function zinesh_send_verification_code_email(string $email, string $name, string
 </html>
 HTML;
 
-    $text = "Aramıza hoş geldin sevgili {$name}.\n\n"
-        . "Güvene dayalı dijital ekonomi protokolümüz artık hizmetindedir.\n\n"
-        . "Doğrulama sonrası kurucu görevlerine başlarsın: her görev +{$reward} FİZİ. Beş görev bitince toplam 500 FİZİ cüzdanına geçer. FİZİ uygulama içi avantajlar içindir; çekilemez.\n\n"
-        . "Doğrulama kodun: {$code}\n\n"
-        . "Kod 15 dakika geçerlidir. Sorun yaşarsan bu e-postayı yanıtlayabilirsin, yardımcı olmaktan memnuniyet duyarız.\n";
+    $text = "Zinesh Güven Protokolü\n\n"
+        . "Hoş geldin {$name}.\n\n"
+        . "Zinesh'e katıldığın için teşekkür ederiz.\n\n"
+        . "Hesabını doğrulamak için aşağıdaki kodu kullan:\n\n"
+        . "{$code}\n\n"
+        . "Bu kod 15 dakika boyunca geçerlidir.\n\n"
+        . "Bu işlemi sen başlatmadıysan bu e-postayı dikkate alabilirsin.\n\n"
+        . "Zinesh\n";
 
     $sent = zinesh_send_mail($email, $subject, $html, $text);
     zinesh_audit('email_verification_code_sent', ['email' => $email, 'sent' => $sent]);
