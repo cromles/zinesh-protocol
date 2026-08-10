@@ -8,6 +8,13 @@ secrets/deploy.local.env
 secrets/*.local.env
 !secrets/*.example.env
 
+# SSH private keys (asla commit etme)
+secrets/*.pem
+secrets/*_ed25519
+secrets/deploy.local.key
+secrets/zinesh_deploy_ed25519
+**/.ssh/zinesh_admin
+
 dist-ssr/
 
 .vscode/

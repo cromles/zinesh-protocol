@@ -8,7 +8,7 @@ from pathlib import Path
 
 import paramiko
 
-from deploy_common import USER, require_deploy_host, require_deploy_pass
+from deploy_common import connect_deploy_ssh
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
@@ -46,11 +46,7 @@ def main() -> int:
     if not DIST.is_dir():
         print("dist/ missing — run npm run build first")
         return 1
-    host = require_deploy_host()
-    pw = require_deploy_pass()
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(host, username=USER, password=pw, timeout=60)
+    ssh = connect_deploy_ssh(timeout=60)
     sftp = ssh.open_sftp()
     n1 = upload_tree(sftp, DIST, REMOTE_WWW)
     n2 = upload_tree(sftp, DIST, REMOTE_APP)

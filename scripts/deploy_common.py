@@ -84,6 +84,87 @@ def require_deploy_pass() -> str:
     sys.exit(1)
 
 
+def resolve_deploy_key_path() -> Path | None:
+    """Return private key path when ZINESH_DEPLOY_KEY points to an existing file."""
+    raw = os.environ.get("ZINESH_DEPLOY_KEY", "").strip()
+    if not raw:
+        return None
+    path = Path(raw).expanduser()
+    if not path.is_absolute():
+        path = (ROOT / path).resolve()
+    else:
+        path = path.resolve()
+    if not path.is_file():
+        print(f"WARN: ZINESH_DEPLOY_KEY path not found: {path}", file=sys.stderr)
+        return None
+    return path
+
+
+def _deploy_key_passphrase() -> str | None:
+    value = os.environ.get("ZINESH_DEPLOY_KEY_PASSPHRASE", "").strip()
+    return value if value else None
+
+
+def load_deploy_private_key(key_path: Path):
+    """Load Ed25519 private key; passphrase from ZINESH_DEPLOY_KEY_PASSPHRASE when set."""
+    import paramiko
+
+    try:
+        return paramiko.Ed25519Key.from_private_key_file(
+            str(key_path),
+            password=_deploy_key_passphrase(),
+        )
+    except paramiko.PasswordRequiredException:
+        print(
+            "ERROR: SSH private key is encrypted.\n"
+            f"       Set ZINESH_DEPLOY_KEY_PASSPHRASE in {SECRETS_FILE}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    except paramiko.SSHException as err:
+        print(
+            f"ERROR: Could not load SSH private key ({key_path}): {err}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
+def resolve_deploy_auth_method() -> str:
+    """Return 'key', 'password', or 'none' (no secret values)."""
+    if resolve_deploy_key_path() is not None:
+        return "key"
+    if os.environ.get("ZINESH_DEPLOY_PASS", "").strip():
+        return "password"
+    return "none"
+
+
+def connect_deploy_ssh(*, timeout: int = 60):
+    """Open SSH session: Ed25519 key first, password fallback during migration."""
+    import paramiko
+
+    host = require_deploy_host()
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    key_path = resolve_deploy_key_path()
+    if key_path is not None:
+        pkey = load_deploy_private_key(key_path)
+        ssh.connect(host, username=USER, pkey=pkey, timeout=timeout)
+        return ssh
+
+    password = os.environ.get("ZINESH_DEPLOY_PASS", "").strip()
+    if password:
+        ssh.connect(host, username=USER, password=password, timeout=timeout)
+        return ssh
+
+    print(
+        "ERROR: No deploy SSH credentials.\n"
+        f"       Set ZINESH_DEPLOY_KEY (preferred) or ZINESH_DEPLOY_PASS in {SECRETS_FILE}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
 def require_founder_email() -> str:
     email = os.environ.get("ZINESH_FOUNDER_EMAIL", "").strip().lower()
     if email:
