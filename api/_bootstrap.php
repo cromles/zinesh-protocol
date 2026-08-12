@@ -112,12 +112,94 @@ function zinesh_json_read(string $file): array {
     return is_array($data) ? $data : [];
 }
 
+/**
+ * Kilit ayrı ve sabit bir dosyada tutulur: commit sırasındaki rename hedef dosyanın
+ * inode'unu değiştirdiği için kilit hedef dosyada tutulsaydı, kilidi bekleyen süreç
+ * rename sonrası artık kimsenin görmediği eski inode'u kilitlemiş olurdu.
+ */
+function zinesh_json_lock_path(string $path): string {
+    return $path . '.lock';
+}
+
+/** @return resource|false */
+function zinesh_json_lock_open(string $path) {
+    $lockPath = zinesh_json_lock_path($path);
+    $existed = is_file($lockPath);
+    $fp = @fopen($lockPath, 'c');
+    if ($fp === false) {
+        // Kilit dosyası başka bir kullanıcıya aitse salt-okuma yeterli; flock açılış modundan bağımsızdır.
+        return @fopen($lockPath, 'r');
+    }
+    if (!$existed) {
+        @chmod($lockPath, 0664);
+    }
+    return $fp;
+}
+
+/**
+ * Geçici dosyaya tam yazım + fsync + atomik rename.
+ * Süreç hangi noktada ölürse ölsün hedef dosya ya eski ya da yeni içeriği bütün olarak gösterir;
+ * hiçbir anda boş veya yarım JSON görünmez.
+ */
+function zinesh_json_commit(string $path, array $data): void {
+    $encoded = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    if ($encoded === false) {
+        throw new RuntimeException('JSON kodlanamadı: ' . basename($path));
+    }
+
+    $stat = is_file($path) ? @stat($path) : false;
+    $mode = is_array($stat) ? ($stat['mode'] & 0777) : 0664;
+
+    $tmp = $path . '.tmp' . getmypid() . '.' . uniqid();
+    $fp = @fopen($tmp, 'wb');
+    if ($fp === false) {
+        throw new RuntimeException('Geçici dosya açılamadı: ' . basename($path));
+    }
+    try {
+        if (fwrite($fp, $encoded) !== strlen($encoded)) {
+            throw new RuntimeException('Geçici dosyaya eksik yazıldı: ' . basename($path));
+        }
+        if (!fflush($fp)) {
+            throw new RuntimeException('Geçici dosya diske aktarılamadı: ' . basename($path));
+        }
+        if (function_exists('fsync')) {
+            fsync($fp);
+        }
+    } catch (Throwable $e) {
+        fclose($fp);
+        @unlink($tmp);
+        throw $e;
+    }
+    fclose($fp);
+
+    @chmod($tmp, $mode);
+    // Root ile çalışan ops scriptleri hedef dosyanın sahipliğini www-data'dan kaçırmasın.
+    if (is_array($stat) && function_exists('posix_geteuid') && posix_geteuid() === 0) {
+        @chown($tmp, $stat['uid']);
+        @chgrp($tmp, $stat['gid']);
+    }
+
+    if (!rename($tmp, $path)) {
+        @unlink($tmp);
+        throw new RuntimeException('Atomik rename başarısız: ' . basename($path));
+    }
+}
+
 function zinesh_json_write(string $file, array $data): void {
-    file_put_contents(
-        zinesh_data_path($file),
-        json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
-        LOCK_EX
-    );
+    $path = zinesh_data_path($file);
+    $lock = zinesh_json_lock_open($path);
+    if ($lock === false) {
+        throw new RuntimeException('Veri dosyası açılamadı: ' . $file);
+    }
+    try {
+        if (!flock($lock, LOCK_EX)) {
+            throw new RuntimeException('Kilit alınamadı: ' . $file);
+        }
+        zinesh_json_commit($path, $data);
+        flock($lock, LOCK_UN);
+    } finally {
+        fclose($lock);
+    }
 }
 
 /**
@@ -156,28 +238,25 @@ function zinesh_json_atomic_once(string $file, callable $mutator) {
     if (!is_dir($dir)) {
         mkdir($dir, 0700, true);
     }
-    $fp = fopen($path, 'c+');
-    if ($fp === false) {
+    $lock = zinesh_json_lock_open($path);
+    if ($lock === false) {
         throw new RuntimeException('Veri dosyası açılamadı: ' . $file);
     }
     try {
-        if (!flock($fp, LOCK_EX)) {
+        if (!flock($lock, LOCK_EX)) {
             throw new RuntimeException('Kilit alınamadı: ' . $file);
         }
-        $raw = stream_get_contents($fp);
+        $raw = is_file($path) ? (string)file_get_contents($path) : '';
         $data = json_decode($raw ?: '[]', true);
         if (!is_array($data)) {
             $data = [];
         }
         $result = $mutator($data);
-        ftruncate($fp, 0);
-        rewind($fp);
-        fwrite($fp, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        fflush($fp);
-        flock($fp, LOCK_UN);
+        zinesh_json_commit($path, $data);
+        flock($lock, LOCK_UN);
         return $result;
     } finally {
-        fclose($fp);
+        fclose($lock);
     }
 }
 
