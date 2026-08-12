@@ -19,7 +19,7 @@ zinesh_admin_require_html();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     zinesh_admin_verify_csrf();
     if (isset($_POST['auto_send'])) {
-        zinesh_process_withdrawal_by_id((string)$_POST['auto_send']);
+        zinesh_recover_withdrawal_by_id((string)$_POST['auto_send']);
         zinesh_admin_redirect();
     }
     if (isset($_POST['approve_manual_review'])) {
