@@ -13,6 +13,17 @@ function zinesh_backup_skip_relative_paths(): array
 }
 
 /**
+ * Atomik yazımın yan ürünleri manifest dışında tutulur.
+ * <dosya>.tmp<pid>.<uniqid> rename ile kaybolur; manifest'e girip kopyalamaya sıra
+ * gelmeden yok olursa tüm yedek copy_failed ile düşerdi. <dosya>.lock ise kalıcı bir
+ * kilit tutamağıdır, snapshot'a taşınacak bir veri taşımaz.
+ */
+function zinesh_backup_is_atomic_artifact(string $name): bool
+{
+    return str_contains($name, '.tmp') || str_ends_with($name, '.lock');
+}
+
+/**
  * @return array<string, array{size:int, hash:string}>
  */
 function zinesh_backup_manifest(string $root, ?array $skipPrefixes = null): array
@@ -31,6 +42,9 @@ function zinesh_backup_manifest(string $root, ?array $skipPrefixes = null): arra
 
     foreach ($iterator as $item) {
         if (!$item->isFile()) {
+            continue;
+        }
+        if (zinesh_backup_is_atomic_artifact($item->getFilename())) {
             continue;
         }
         $full = str_replace('\\', '/', $item->getPathname());
