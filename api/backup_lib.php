@@ -244,6 +244,7 @@ function zinesh_backup_update_health(array $result): void
     }
 
     $verification = is_array($result['verification'] ?? null) ? $result['verification'] : [];
+    $dataDirInfo = zinesh_data_dir_diagnostics();
 
     zinesh_json_write('backup_health.json', array_merge($existing, [
         'source' => 'Sunucu yerel yedek',
@@ -262,6 +263,9 @@ function zinesh_backup_update_health(array $result): void
         'rootJsonCount' => (int)($result['root_json_count'] ?? 0),
         'subdirs' => $verification['backup_subdirs'] ?? [],
         'note' => 'Doğrulanmış yerel snapshot',
+        'configuredDataDir' => $dataDirInfo['configuredDataDir'],
+        'resolvedDataDir' => $dataDirInfo['resolvedDataDir'],
+        'dataDirMatchesConfig' => $dataDirInfo['dataDirMatchesConfig'],
     ]));
 }
 

@@ -554,6 +554,16 @@ function zinesh_founder_system_health(bool $authOk = true): array {
         ];
     }
 
+    try {
+        $dataDirInfo = zinesh_data_dir_diagnostics();
+    } catch (Throwable) {
+        $dataDirInfo = [
+            'configuredDataDir' => '',
+            'resolvedDataDir' => '',
+            'dataDirMatchesConfig' => false,
+        ];
+    }
+
     $checkedAt = zinesh_founder_format_checked_at(date('c'));
 
     $disasterRecovery = [
@@ -592,5 +602,8 @@ function zinesh_founder_system_health(bool $authOk = true): array {
         ],
         'disasterRecovery' => $disasterRecovery,
         'server' => $server,
+        'configuredDataDir' => $dataDirInfo['configuredDataDir'],
+        'resolvedDataDir' => $dataDirInfo['resolvedDataDir'],
+        'dataDirMatchesConfig' => $dataDirInfo['dataDirMatchesConfig'],
     ];
 }

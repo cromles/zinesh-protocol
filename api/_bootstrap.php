@@ -63,6 +63,48 @@ function zinesh_config(): array {
     return $cfg;
 }
 
+function zinesh_configured_data_dir(): string {
+    return rtrim((string)(zinesh_config()['data_dir'] ?? ''), '/');
+}
+
+function zinesh_data_dir_paths_equal(string $configured, string $resolved): bool {
+    if ($configured === '') {
+        return false;
+    }
+    $norm = static function (string $path): string {
+        return rtrim(str_replace('\\', '/', $path), '/');
+    };
+    return $norm($configured) === $norm($resolved);
+}
+
+/**
+ * Yalnızca raporlar: verilen dizini olduğu gibi geri döndürür, seçimi asla değiştirmez.
+ * Süreç başına tek satır yazar, böylece FPM/cron log'u şişmez.
+ */
+function zinesh_note_data_dir_choice(string $configured, string $resolved): string {
+    static $warned = false;
+    if (!$warned && !zinesh_data_dir_paths_equal($configured, $resolved) && $configured !== '') {
+        $warned = true;
+        error_log(sprintf(
+            'zinesh: data_dir divergence — configured=%s resolved=%s (fallback aktif)',
+            $configured,
+            $resolved
+        ));
+    }
+    return $resolved;
+}
+
+/** @return array{configuredDataDir:string,resolvedDataDir:string,dataDirMatchesConfig:bool} */
+function zinesh_data_dir_diagnostics(): array {
+    $configured = zinesh_configured_data_dir();
+    $resolved = zinesh_resolve_data_dir();
+    return [
+        'configuredDataDir' => $configured,
+        'resolvedDataDir' => $resolved,
+        'dataDirMatchesConfig' => zinesh_data_dir_paths_equal($configured, $resolved),
+    ];
+}
+
 function zinesh_resolve_data_dir(): string {
     $simDir = getenv('ZINESH_SIM_DATA_DIR');
     if (is_string($simDir) && $simDir !== '') {
@@ -71,7 +113,7 @@ function zinesh_resolve_data_dir(): string {
         }
         return rtrim($simDir, '/');
     }
-    $configured = rtrim((string)(zinesh_config()['data_dir'] ?? ''), '/');
+    $configured = zinesh_configured_data_dir();
     $candidates = array_values(array_unique(array_filter([
         $configured,
         __DIR__ . '/data',
@@ -85,7 +127,7 @@ function zinesh_resolve_data_dir(): string {
         $probe = $dir . '/users.json';
         $usersOk = file_exists($probe) && is_readable($probe);
         if ($usersOk && is_writable($dir)) {
-            return $dir;
+            return zinesh_note_data_dir_choice($configured, $dir);
         }
         if ($usersOk && $readableOnly === null) {
             $readableOnly = $dir;
@@ -94,7 +136,10 @@ function zinesh_resolve_data_dir(): string {
             $readableOnly = $dir;
         }
     }
-    return $readableOnly ?? ($configured !== '' ? $configured : __DIR__ . '/data');
+    return zinesh_note_data_dir_choice(
+        $configured,
+        $readableOnly ?? ($configured !== '' ? $configured : __DIR__ . '/data')
+    );
 }
 
 function zinesh_data_path(string $file): string {
