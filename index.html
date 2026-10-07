@@ -1,246 +1,177 @@
 <!doctype html>
 <html lang="tr">
-  <head>
-    <meta charset="UTF-8">
-    <script>
-      /* Apex host API POST'larını bozar — www'ye al. */
-      if (location.hostname === 'zinesh.com') {
-        location.replace('https://www.zinesh.com' + location.pathname + location.search + location.hash);
-      }
-    </script>
-    <script>
-      try {
-        if (localStorage.getItem('zinesh-theme') === 'light') {
-          document.documentElement.setAttribute('data-theme', 'light');
-          var tc = document.querySelector('meta[name="theme-color"]');
-          if (tc) tc.setAttribute('content', '#ffffff');
-        }
-      } catch (e) {}
-    </script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#06060a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Zinesh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#02050a">
+  <meta name="robots" content="index, follow">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/favicon-192x192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="192x192">
+  <title>Zinesh — Güvenin yeni altyapısı</title>
+  <meta name="description" content="Zinesh, dijital dünya ile gerçek dünya arasındaki ticarette güveni yeniden tanımlamak için geliştirilen Güven Protokolüdür. Zinesh V3 çok yakında.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Zinesh">
+  <meta property="og:locale" content="tr_TR">
+  <meta property="og:url" content="https://www.zinesh.com/">
+  <meta property="og:title" content="Zinesh — Güvenin yeni altyapısı">
+  <meta property="og:description" content="Dijital dünya ile gerçek dünya arasındaki ticarette güveni yeniden tanımlıyoruz. Zinesh V3 çok yakında.">
+  <meta property="og:image" content="https://www.zinesh.com/og-image.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Zinesh — Güvenin yeni altyapısı">
+  <meta name="twitter:description" content="Zinesh V3 çok yakında.">
+  <meta name="twitter:image" content="https://www.zinesh.com/og-image.jpg">
+  <style>
+    :root{--bg:#02050a;--panel:rgba(8,15,23,.72);--text:#f5f7fa;--muted:#a5adb8;--line:rgba(255,255,255,.09);--blue:#54b9ff;--gold:#f2bd72;--gold2:#ffe1a8}
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Sora,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+    a{color:inherit;text-decoration:none}
+    .page{min-height:100vh;overflow:hidden}
+    .hero{position:relative;min-height:720px;display:flex;flex-direction:column}
+    .hero:before{content:"";position:absolute;inset:0;background:
+      radial-gradient(circle at 78% 42%,rgba(242,189,114,.18),transparent 27%),
+      radial-gradient(circle at 63% 34%,rgba(84,185,255,.14),transparent 28%),
+      linear-gradient(180deg,#02050a 0%,rgba(2,5,10,.78) 50%,#02050a 100%);pointer-events:none}
+    .hero:after{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;background:linear-gradient(180deg,transparent,#02050a);pointer-events:none}
+    .grid{position:absolute;inset:0;opacity:.16;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:72px 72px;mask-image:linear-gradient(to bottom,black,transparent 75%)}
+    nav{position:relative;z-index:5;width:min(1180px,calc(100% - 48px));margin:0 auto;padding:27px 0;display:flex;align-items:center;justify-content:space-between}
+    .brand{display:flex;align-items:center;gap:13px;letter-spacing:.34em;font-size:14px;font-weight:500}
+    .mark{width:35px;height:35px;position:relative;display:grid;place-items:center;font-size:28px;font-weight:300;line-height:1;transform:skew(-8deg)}
+    .mark:before{content:"";position:absolute;inset:2px 1px;border-top:1px solid #fff;border-left:1px solid transparent;border-right:1px solid #fff;transform:skew(-15deg)}
+    .links{display:flex;gap:30px;color:#b8c0ca;font-size:13px}
+    .links a:hover{color:#fff}
+    .hero-content{position:relative;z-index:3;width:min(1180px,calc(100% - 48px));margin:auto;display:grid;grid-template-columns:1.05fr .95fr;align-items:center;gap:40px;padding:55px 0 110px}
+    .eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--blue);margin-bottom:20px}
+    h1{font-size:clamp(58px,8vw,104px);line-height:.93;letter-spacing:-.065em;margin:0;max-width:620px}
+    h1 span{display:block;color:var(--gold);font-weight:600}
+    .lead{font-size:18px;line-height:1.65;color:#c0c7d0;max-width:600px;margin:30px 0 30px}
+    .status{display:inline-flex;align-items:center;gap:22px;padding:19px 23px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(135deg,rgba(13,24,36,.86),rgba(5,10,16,.68));box-shadow:0 20px 60px rgba(0,0,0,.24)}
+    .status-dot{width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 18px rgba(242,189,114,.65)}
+    .status small{display:block;color:#8993a0;font-size:11px;margin-bottom:4px;letter-spacing:.05em}
+    .status strong{font-size:16px}
+    .arrow{font-size:24px;color:#b9c2cc}
+    .orb{position:relative;min-height:430px;display:grid;place-items:center}
+    .orb:before{content:"";position:absolute;width:390px;height:390px;border-radius:50%;background:radial-gradient(circle,rgba(84,185,255,.13),transparent 63%);filter:blur(2px)}
+    .z{position:relative;font-size:300px;line-height:.7;font-weight:200;letter-spacing:-.18em;color:transparent;background:linear-gradient(145deg,#eaf5ff 5%,#4ab5ff 38%,#f4bd70 72%,#fff0d1);-webkit-background-clip:text;background-clip:text;transform:skew(-7deg);filter:drop-shadow(0 0 30px rgba(84,185,255,.12))}
+    .orbit{position:absolute;width:470px;height:180px;border:1px solid rgba(242,189,114,.32);border-left-color:rgba(84,185,255,.65);border-radius:50%;transform:rotate(-17deg);box-shadow:0 0 35px rgba(84,185,255,.08)}
+    .orbit:after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;background:var(--gold2);right:9%;top:18%;box-shadow:0 0 15px var(--gold)}
+    .v3{position:absolute;right:0;bottom:15%;font-size:11px;letter-spacing:.25em;color:#aeb7c2;text-transform:uppercase}
+    section{position:relative;z-index:2}
+    .features{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:rgba(1,4,8,.92)}
+    .feature-grid{width:min(1180px,calc(100% - 48px));margin:auto;display:grid;grid-template-columns:repeat(4,1fr)}
+    .feature{padding:55px 30px 58px 0;margin-right:30px;border-right:1px solid var(--line)}
+    .feature:last-child{border:0;margin-right:0}
+    .icon{font-size:25px;color:var(--gold);margin-bottom:24px}
+    .feature h3{font-size:17px;margin:0 0 11px}
+    .feature p{margin:0;color:#8f98a4;line-height:1.65;font-size:14px}
+    .about{width:min(1180px,calc(100% - 48px));margin:auto;padding:115px 0}
+    .about-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:90px;align-items:center}
+    .section-label{color:var(--gold);font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:17px}
+    h2{font-size:clamp(35px,5vw,58px);line-height:1.03;letter-spacing:-.045em;margin:0 0 24px}
+    .about p{color:#a9b1bb;line-height:1.8;font-size:16px;max-width:570px}
+    .quote-card{min-height:340px;border:1px solid var(--line);border-radius:24px;overflow:hidden;position:relative;background:radial-gradient(circle at 70% 20%,rgba(242,189,114,.17),transparent 30%),linear-gradient(145deg,#101a24,#05090e)}
+    .quote-card:before{content:"";position:absolute;inset:auto -10% -38% -10%;height:65%;background:radial-gradient(ellipse,rgba(242,189,114,.23),transparent 58%)}
+    .mountains{position:absolute;inset:auto 0 0;height:55%;opacity:.4;background:linear-gradient(150deg,transparent 38%,#182b3b 39%,#182b3b 48%,transparent 49%),linear-gradient(30deg,transparent 45%,#243848 46%,#243848 58%,transparent 59%)}
+    .quote{position:absolute;left:38px;bottom:35px;max-width:460px;font-size:24px;line-height:1.45;letter-spacing:-.02em}
+    .quote b{color:var(--gold2);font-weight:500}
+    .how{border-top:1px solid var(--line);background:#03070c;padding:105px 0}
+    .how-inner{width:min(1180px,calc(100% - 48px));margin:auto}
+    .steps{display:grid;grid-template-columns:repeat(4,1fr);margin-top:55px}
+    .step{padding:0 28px 0 0;margin-right:28px;border-right:1px solid var(--line)}
+    .step:last-child{border:0}
+    .num{font-size:12px;color:#697583;letter-spacing:.15em;margin-bottom:18px}
+    .step h3{margin:0 0 9px;font-size:16px}
+    .step p{margin:0;color:#818b97;font-size:14px;line-height:1.65}
+    .development{width:min(1060px,calc(100% - 48px));margin:0 auto 110px;padding:30px 34px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(120deg,rgba(11,25,37,.85),rgba(5,10,16,.65));display:flex;justify-content:space-between;gap:50px;align-items:center}
+    .development h3{font-size:21px;margin:0 0 8px}
+    .development p{color:#89939f;margin:0;line-height:1.6;font-size:14px}
+    .checks{display:grid;gap:10px;color:#aeb6c0;font-size:13px;min-width:300px}
+    .checks span:before{content:"✓";color:var(--blue);margin-right:10px}
+    footer{border-top:1px solid var(--line);padding:35px 0 42px}
+    .footer-inner{width:min(1180px,calc(100% - 48px));margin:auto;display:flex;justify-content:space-between;align-items:end;gap:30px}
+    .footer-brand{color:#9da6b1;font-size:12px;letter-spacing:.28em}
+    .footer-brand small{display:block;letter-spacing:0;margin-top:9px;color:#66717e}
+    .footer-links{display:flex;gap:24px;color:#7f8995;font-size:12px}
+    .footer-note{color:#59636f;font-size:11px;margin-top:13px;text-align:right}
+    @media(max-width:800px){
+      .hero{min-height:auto}.links{display:none}.hero-content{grid-template-columns:1fr;padding:65px 0 85px}.orb{min-height:270px;order:-1}.z{font-size:190px}.orbit{width:330px;height:125px}.v3{right:10%;bottom:5%}
+      .feature-grid,.steps{grid-template-columns:1fr 1fr}.feature{padding:38px 20px 40px 0;margin-right:20px}.feature:nth-child(2){border-right:0;margin-right:0}.feature:nth-child(3){border-top:1px solid var(--line)}.feature:nth-child(4){border-top:1px solid var(--line)}
+      .about{padding:80px 0}.about-grid{grid-template-columns:1fr;gap:45px}.quote-card{min-height:290px}.development{flex-direction:column;align-items:flex-start}.checks{min-width:0}
+    }
+    @media(max-width:520px){
+      nav,.hero-content,.feature-grid,.about,.how-inner,.footer-inner{width:min(100% - 34px,1180px)}.hero-content{padding-top:35px}.lead{font-size:16px}.status{width:100%;justify-content:space-between}.orb{min-height:220px}.z{font-size:145px}.orbit{width:270px;height:100px}.feature-grid,.steps{grid-template-columns:1fr}.feature{border-right:0!important;border-bottom:1px solid var(--line);margin:0;padding-right:0}.feature:last-child{border-bottom:0}.steps{gap:35px}.step{border-right:0;border-bottom:1px solid var(--line);padding:0 0 30px;margin:0}.step:last-child{border:0}.footer-inner{align-items:flex-start;flex-direction:column}.footer-links{flex-wrap:wrap}.footer-note{text-align:left}
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <header class="hero" id="top">
+    <div class="grid"></div>
+    <nav>
+      <a class="brand" href="/"><span class="mark">Z</span><span>ZINESH</span></a>
+      <div class="links">
+        <a href="#nedir">Nedir?</a><a href="#neden">Neden?</a><a href="#nasil">Nasıl Çalışır?</a><a href="#gelistirme">Geliştirme</a><a href="/blog/">Blog</a>
+      </div>
+    </nav>
+    <div class="hero-content">
+      <div>
+        <div class="eyebrow">Zinesh Protocol</div>
+        <h1>Zinesh<span>Güvenin yeni altyapısı.</span></h1>
+        <p class="lead">Dijital dünya ile gerçek dünya arasındaki ticarette güveni, teknolojiyi ve kuralları yeniden tanımlıyoruz.</p>
+        <div class="status"><div><small>Geliştirme durumu</small><strong>Zinesh şu anda geliştiriliyor.<br>Çok yakında sizlerle.</strong></div><span class="arrow">→</span></div>
+      </div>
+      <div class="orb" aria-hidden="true"><div class="orbit"></div><div class="z">Z</div><div class="v3">Zinesh V3</div></div>
+    </div>
+  </header>
 
-    <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="icon" type="image/png" href="/favicon-48x48.png" sizes="48x48">
-    <link rel="icon" type="image/png" href="/favicon-192x192.png" sizes="192x192">
-    <link rel="icon" type="image/png" href="/favicon-512x512.png" sizes="512x512">
-    <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="192x192">
-    <link rel="manifest" href="/site.webmanifest">
+  <section class="features" id="neden">
+    <div class="feature-grid">
+      <article class="feature"><div class="icon">♢</div><h3>Daha güvenli ticaret</h3><p>Taraflar birbirine körü körüne güvenmek zorunda değil. Kurallar ve teknoloji güvenin yerini alır.</p></article>
+      <article class="feature"><div class="icon">◇</div><h3>Dijital ve gerçek dünyayı birleştirir</h3><p>Dijital teknolojileri günlük ticaretin gerçek ihtiyaçlarıyla buluşturur.</p></article>
+      <article class="feature"><div class="icon">▤</div><h3>Şeffaf ve adil</h3><p>Süreçler açık, izlenebilir ve önceden belirlenen kurallara bağlıdır.</p></article>
+      <article class="feature"><div class="icon">◌</div><h3>Herkes için</h3><p>Bireyler, küçük işletmeler ve profesyoneller için daha eşit bir ticaret ortamı hedefler.</p></article>
+    </div>
+  </section>
 
-    <title>Zinesh | Güvenli Ödeme ve Emanet (Escrow)</title>
-    <meta
-      name="description"
-      content="Zinesh — Güvenli ödeme ve escrow (emanet) sistemi. Alıcı ve satıcı arasında parayı güvenli kasada tutar; onay sonrası ödeme, itirazda hakemlik."
-   >
-    <meta
-      name="keywords"
-      content="Zinesh, güvenli ödeme, emanet, escrow, alıcı satıcı, hakemlik, itiraz, freelance, dijital varlık"
-   >
-    <meta name="author" content="Zinesh Protocol">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://www.zinesh.com/">
+  <section class="about" id="nedir">
+    <div class="about-grid">
+      <div>
+        <div class="section-label">Zinesh nedir?</div>
+        <h2>Güven sorununu teknolojiyle çözmek.</h2>
+        <p>Zinesh, dijital dünyada ve gerçek dünyada gerçekleşen ticaretin güven sorununu çözmek için geliştirilen bir Güven Protokolüdür.</p>
+        <p>Taraflar birbirini tanımasa bile, akıllı kurallar ve teknoloji sayesinde güvenli bir şekilde işlem yapabilmeleri için bir altyapı oluşturuyoruz.</p>
+      </div>
+      <div class="quote-card"><div class="mountains"></div><div class="quote">Daha açık.<br><b>Daha güvenli.</b><br>Daha adil bir ticaret mümkün.</div></div>
+    </div>
+  </section>
 
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="Zinesh">
-    <meta property="og:locale" content="tr_TR">
-    <meta property="og:url" content="https://www.zinesh.com/">
-    <meta property="og:title" content="Zinesh | Güvenli Ödeme ve Emanet">
-    <meta
-      property="og:description"
-      content="Alıcı kasaya yatırır, satıcı teslim eder. Onay sonrası ödeme; itirazda tarafsız hakem heyeti."
-   >
-    <meta property="og:image" content="https://www.zinesh.com/og-image.jpg">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="1053">
-    <meta property="og:image:alt" content="Zinesh — güvenli ödeme ve emanet">
-    <meta property="og:image:type" content="image/jpeg">
-
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:image" content="https://www.zinesh.com/og-image.jpg">
-    <meta name="twitter:site" content="@zineshprotocol">
-    <meta name="twitter:title" content="Zinesh | Güvenli Ödeme ve Emanet">
-    <meta
-      name="twitter:description"
-      content="Üçüncü taraf emanet: alıcı ve satıcıyı aynı kasa koruması altında buluşturur."
-   >
-
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@graph": [
-          {
-            "@type": "Organization",
-            "@id": "https://www.zinesh.com/#organization",
-            "name": "Zinesh",
-            "alternateName": "Zinesh Protocol",
-            "url": "https://www.zinesh.com/",
-            "logo": {
-              "@type": "ImageObject",
-              "@id": "https://www.zinesh.com/#logo",
-              "url": "https://www.zinesh.com/google-logo.png",
-              "contentUrl": "https://www.zinesh.com/google-logo.png",
-              "width": 512,
-              "height": 512,
-              "caption": "Zinesh markası — kare çerçeve içinde Z"
-            },
-            "image": {
-              "@type": "ImageObject",
-              "url": "https://www.zinesh.com/google-logo.png",
-              "width": 512,
-              "height": 512
-            },
-            "description": "Zinesh güven protokolüdür — emanet kasası ve hakemlik ile sözü korur.",
-            "sameAs": [
-              "https://x.com/zineshprotocol",
-              "https://t.me/zinesh1",
-              "https://www.instagram.com/zinesh.protocol"
-            ],
-            "founder": {
-              "@type": "Person",
-              "name": "Yasin Karademir",
-              "jobTitle": "Kurucu",
-              "url": "https://www.zinesh.com/kurucu/"
-            },
-            "contactPoint": {
-              "@type": "ContactPoint",
-              "email": "noreply@zinesh.com",
-              "contactType": "customer support",
-              "availableLanguage": ["Turkish", "English"]
-            }
-          },
-          {
-            "@type": "WebSite",
-            "@id": "https://www.zinesh.com/#website",
-            "url": "https://www.zinesh.com/",
-            "name": "Zinesh",
-            "description": "Zinesh güven protokolüdür — emanet kasası ve hakemlik ile sözü korur.",
-            "publisher": { "@id": "https://www.zinesh.com/#organization" },
-            "inLanguage": "tr-TR"
-          }
-        ]
-      }
-    </script>
-
-    <style>
-      html {
-        overflow-x: hidden;
-        max-width: 100%;
-      }
-      body {
-        margin: 0;
-        font-family: 'Sora', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-          'Helvetica Neue', Arial, sans-serif;
-        background: #020203;
-        color: #f4f4f5;
-        -webkit-font-smoothing: antialiased;
-        overflow-x: hidden;
-        max-width: 100%;
-        width: 100%;
-      }
-      #root {
-        min-height: 100vh;
-        overflow-x: hidden;
-        max-width: 100%;
-        width: 100%;
-      }
-      /* JS yüklenmeden önce crawler / no-script kullanıcıları için; React mount sonrası değişir */
-      .seo-prerender {
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        padding: 1.5rem 1.25rem 1.25rem;
-        box-sizing: border-box;
-      }
-      .seo-prerender__intro {
-        max-width: 40rem;
-        margin: 0 auto;
-        text-align: center;
-        padding: 2rem 0 1rem;
-      }
-      .seo-prerender__intro h1 {
-        margin: 0 0 0.75rem;
-        font-size: clamp(1.35rem, 4vw, 1.75rem);
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        color: #fafafa;
-      }
-      .seo-prerender__intro p {
-        margin: 0;
-        font-size: 0.9rem;
-        line-height: 1.65;
-        color: #a1a1aa;
-      }
-      .seo-prerender__footer {
-        margin-top: auto;
-        padding-top: 1.25rem;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
-      }
-      .seo-prerender__footer nav {
-        max-width: 48rem;
-        margin: 0 auto;
-      }
-      .seo-prerender__label {
-        display: block;
-        margin-bottom: 0.65rem;
-        font-size: 0.65rem;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: #71717a;
-        text-align: center;
-      }
-      .seo-prerender__links {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 0.4rem 0.65rem;
-        margin: 0;
-        padding: 0;
-        list-style: none;
-      }
-      .seo-prerender__links a {
-        font-size: 0.75rem;
-        color: #c084fc;
-        text-decoration: none;
-        padding: 0.2rem 0.45rem;
-        border-radius: 0.25rem;
-      }
-      .seo-prerender__links a:hover {
-        color: #e9d5ff;
-        background: rgba(192, 132, 252, 0.08);
-      }
-    </style>
-  </head>
-  <body>
-    <div id="root">
-      <div class="seo-prerender">
-        <main class="seo-prerender__intro" id="main-content">
-          <h1>Zinesh Güven Protokolü</h1>
-          <p>
-            Tanımadığınız kişilerle çalışırken paranız güvenli kasada bekler.
-            İş bitince onaylarsınız; anlaşmazlıkta bağımsız hakemler karar verir.
-          </p>
-        </main>
-        <footer class="seo-prerender__footer">
-          <nav aria-label="Site haritası">
-            <span class="seo-prerender__label">Keşfet</span>
-            <ul class="seo-prerender__links">
-              <li><a href="/nedir/">Zinesh Nedir?</a></li>
-              <li><a href="/guven-protokolu/">Güven Protokolü</a></li>
-              <li><a href="/hakemlik/">Hakemlik</a></li>
-              <li><a href="/komisyonlar/">Komisyonlar</a></li>
-              <li><a href="/guven-protokolu/">Güven Protokolü</a></li>
-              <li><a href="/whitepaper/">Whitepaper</a></li>
-              <li><a href="/teknik-dokuman/">Teknik Doküman</a></li>
-              <li><a href="/sss/">SSS</a></li>
-              <li><a href="/blog/">Blog</a></li>
-            </ul>
-          </nav>
-        </footer>
+  <section class="how" id="nasil">
+    <div class="how-inner">
+      <div class="section-label">Temel fikir</div>
+      <h2>Güven, kişilere değil<br>kurallara dayanır.</h2>
+      <div class="steps">
+        <article class="step"><div class="num">01</div><h3>Taraflar anlaşır</h3><p>Hizmet veya ürün üzerindeki koşullar önceden belirlenir.</p></article>
+        <article class="step"><div class="num">02</div><h3>Emanet sistemi</h3><p>Belirlenen şartlara göre işlem güvenli bir yapıda tutulur.</p></article>
+        <article class="step"><div class="num">03</div><h3>Kurallar işler</h3><p>Tanımlanan koşullar gerçekleştiğinde sistem süreci ilerletir.</p></article>
+        <article class="step"><div class="num">04</div><h3>Güvenli sonuç</h3><p>Her iki taraf için daha şeffaf ve öngörülebilir bir sonuç hedeflenir.</p></article>
       </div>
     </div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+  </section>
+
+  <section id="gelistirme">
+    <div class="development">
+      <div><div class="section-label">Şu anda</div><h3>Zinesh V3 geliştirme aşamasında.</h3><p>Daha güçlü, daha modüler ve daha güvenli bir altyapı üzerinde çalışıyoruz.</p></div>
+      <div class="checks"><span>Mimari yeniden tasarlanıyor</span><span>Güven katmanı güçlendiriliyor</span><span>Daha geniş kullanım senaryoları hazırlanıyor</span><span>Teknik dokümantasyon geliştiriliyor</span></div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-brand">ZINESH<small>Güvenin yeni altyapısı.</small></div>
+      <div><div class="footer-links"><a href="#nedir">Nedir?</a><a href="#neden">Neden?</a><a href="#nasil">Nasıl Çalışır?</a><a href="/blog/">Blog</a><a href="https://github.com/cromles/zinesh-protocol" target="_blank" rel="noopener">GitHub</a></div><div class="footer-note">Zinesh V3 — Çok yakında sizlerle.</div></div>
+    </div>
+  </footer>
+</div>
+</body>
 </html>
