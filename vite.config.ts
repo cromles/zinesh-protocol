@@ -10,7 +10,7 @@ function asyncCssPlugin(): Plugin {
     name: 'zinesh-async-css',
     apply: 'build',
     transformIndexHtml(html, ctx) {
-      if (ctx.path.includes('teknik-dokuman')) {
+      if (ctx.path.includes('teknik-dokuman') || ctx.path.includes('blog')) {
         return html;
       }
       return html.replace(
@@ -29,60 +29,45 @@ const DEFERRED_CHUNK_PATTERN =
 
 function manualVendorChunk(id: string): string | undefined {
   if (!id.includes('node_modules')) return undefined;
-
-  // React'i motion'dan ÖNCE ayır — aksi halde index.js motion chunk'ına bağımlı kalır (~70 KiB unused JS)
-  if (id.includes('react-dom') || id.includes('/react/') || id.includes('\\react\\')) {
-    return 'vendor-react';
-  }
-  if (id.includes('motion')) {
-    return 'motion';
-  }
-  if (id.includes('lucide-react')) {
-    return 'vendor-lucide';
-  }
-  if (id.includes('@google/genai')) {
-    return 'vendor-genai';
-  }
+  if (id.includes('react-dom') || id.includes('/react/') || id.includes('\\react\\')) return 'vendor-react';
+  if (id.includes('motion')) return 'motion';
+  if (id.includes('lucide-react')) return 'vendor-lucide';
+  if (id.includes('@google/genai')) return 'vendor-genai';
   return undefined;
 }
 
-export default defineConfig(() => {
-  return {
-    plugins: [react(), tailwindcss(), asyncCssPlugin()],
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, '.'),
+export default defineConfig(() => ({
+  plugins: [react(), tailwindcss(), asyncCssPlugin()],
+  resolve: { alias: { '@': path.resolve(__dirname, '.') } },
+  build: {
+    modulePreload: {
+      polyfill: false,
+      resolveDependencies(_filename, deps) {
+        return deps.filter((dep) => !DEFERRED_CHUNK_PATTERN.test(dep));
       },
     },
-    build: {
-      modulePreload: {
-        polyfill: false,
-        resolveDependencies(_filename, deps) {
-          return deps.filter((dep) => !DEFERRED_CHUNK_PATTERN.test(dep));
-        },
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        blog: path.resolve(__dirname, 'blog/index.html'),
+        teknikDokuman: path.resolve(__dirname, 'teknik-dokuman/index.html'),
       },
-      rollupOptions: {
-        input: {
-          main: path.resolve(__dirname, 'index.html'),
-          teknikDokuman: path.resolve(__dirname, 'teknik-dokuman/index.html'),
-        },
-        output: {
-          manualChunks(id) {
-            return manualVendorChunk(id);
-          },
+      output: {
+        manualChunks(id) {
+          return manualVendorChunk(id);
         },
       },
     },
-    server: {
-      hmr: process.env.DISABLE_HMR !== 'true',
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
-      proxy: {
-        '/api': {
-          target: process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8787',
-          changeOrigin: true,
-          secure: false,
-        },
+  },
+  server: {
+    hmr: process.env.DISABLE_HMR !== 'true',
+    watch: process.env.DISABLE_HMR === 'true' ? null : {},
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8787',
+        changeOrigin: true,
+        secure: false,
       },
     },
-  };
-});
+  },
+}));
