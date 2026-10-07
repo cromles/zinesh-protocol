@@ -3,172 +3,399 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#02050a">
+  <meta name="theme-color" content="#080c10">
   <meta name="robots" content="index, follow">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/favicon-192x192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/favicon-192x192.png" sizes="192x192">
   <title>Zinesh — Güvenin yeni altyapısı</title>
-  <meta name="description" content="Zinesh, dijital dünya ile gerçek dünya arasındaki ticarette güveni yeniden tanımlamak için geliştirilen Güven Protokolüdür. Zinesh V3 çok yakında.">
+  <meta name="description" content="Zinesh; tarafların anlaşmasını, emanet sürecini ve işlem kanıtlarını açık kurallara bağlayan bir güven protokolüdür. Web3 ve gerçek dünya arasında Trust Layer yaklaşımını keşfedin.">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Zinesh">
   <meta property="og:locale" content="tr_TR">
   <meta property="og:url" content="https://www.zinesh.com/">
   <meta property="og:title" content="Zinesh — Güvenin yeni altyapısı">
-  <meta property="og:description" content="Dijital dünya ile gerçek dünya arasındaki ticarette güveni yeniden tanımlıyoruz. Zinesh V3 çok yakında.">
+  <meta property="og:description" content="Zinesh; tarafların anlaşmasını, emanet sürecini ve işlem kanıtlarını açık kurallara bağlayan bir güven protokolüdür. Web3 ve gerçek dünya arasında Trust Layer yaklaşımını keşfedin.">
   <meta property="og:image" content="https://www.zinesh.com/og-image.jpg">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Zinesh — Güvenin yeni altyapısı">
-  <meta name="twitter:description" content="Zinesh V3 çok yakında.">
+  <meta name="twitter:description" content="Zinesh; tarafların anlaşmasını, emanet sürecini ve işlem kanıtlarını açık kurallara bağlayan bir güven protokolüdür.">
   <meta name="twitter:image" content="https://www.zinesh.com/og-image.jpg">
   <style>
-    :root{--bg:#02050a;--panel:rgba(8,15,23,.72);--text:#f5f7fa;--muted:#a5adb8;--line:rgba(255,255,255,.09);--blue:#54b9ff;--gold:#f2bd72;--gold2:#ffe1a8}
-    *{box-sizing:border-box}
-    html{scroll-behavior:smooth}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Sora,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
-    a{color:inherit;text-decoration:none}
-    .page{min-height:100vh;overflow:hidden}
-    .hero{position:relative;min-height:720px;display:flex;flex-direction:column}
-    .hero:before{content:"";position:absolute;inset:0;background:
-      radial-gradient(circle at 78% 42%,rgba(242,189,114,.18),transparent 27%),
-      radial-gradient(circle at 63% 34%,rgba(84,185,255,.14),transparent 28%),
-      linear-gradient(180deg,#02050a 0%,rgba(2,5,10,.78) 50%,#02050a 100%);pointer-events:none}
-    .hero:after{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;background:linear-gradient(180deg,transparent,#02050a);pointer-events:none}
-    .grid{position:absolute;inset:0;opacity:.16;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:72px 72px;mask-image:linear-gradient(to bottom,black,transparent 75%)}
-    nav{position:relative;z-index:5;width:min(1180px,calc(100% - 48px));margin:0 auto;padding:27px 0;display:flex;align-items:center;justify-content:space-between}
-    .brand{display:flex;align-items:center;gap:13px;letter-spacing:.34em;font-size:14px;font-weight:500}
-    .brand-mark{display:block;width:35px;height:35px;flex:0 0 35px;object-fit:contain}
-    .links{display:flex;gap:30px;color:#b8c0ca;font-size:13px}
-    .links a:hover{color:#fff}
-    .hero-content{position:relative;z-index:3;width:min(1180px,calc(100% - 48px));margin:auto;display:grid;grid-template-columns:1.05fr .95fr;align-items:center;gap:40px;padding:55px 0 110px}
-    .eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--blue);margin-bottom:20px}
-    h1{font-size:clamp(58px,8vw,104px);line-height:.93;letter-spacing:-.065em;margin:0;max-width:620px}
-    h1 span{display:block;color:var(--gold);font-weight:600}
-    .lead{font-size:18px;line-height:1.65;color:#c0c7d0;max-width:600px;margin:30px 0 30px}
-    .status{display:inline-flex;align-items:center;gap:22px;padding:19px 23px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(135deg,rgba(13,24,36,.86),rgba(5,10,16,.68));box-shadow:0 20px 60px rgba(0,0,0,.24)}
-    .status-dot{width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 18px rgba(242,189,114,.65)}
-    .status small{display:block;color:#8993a0;font-size:11px;margin-bottom:4px;letter-spacing:.05em}
-    .status strong{font-size:16px}
-    .arrow{font-size:24px;color:#b9c2cc}
-    .orb{position:relative;min-height:430px;display:grid;place-items:center}
-    .orb:before{content:"";position:absolute;width:390px;height:390px;border-radius:50%;background:radial-gradient(circle,rgba(84,185,255,.13),transparent 63%);filter:blur(2px)}
-    .z{position:relative;font-size:300px;line-height:.7;font-weight:200;letter-spacing:-.18em;color:transparent;background:linear-gradient(145deg,#eaf5ff 5%,#4ab5ff 38%,#f4bd70 72%,#fff0d1);-webkit-background-clip:text;background-clip:text;transform:skew(-7deg);filter:drop-shadow(0 0 30px rgba(84,185,255,.12))}
-    .orbit{position:absolute;width:470px;height:180px;border:1px solid rgba(242,189,114,.32);border-left-color:rgba(84,185,255,.65);border-radius:50%;transform:rotate(-17deg);box-shadow:0 0 35px rgba(84,185,255,.08)}
-    .orbit:after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;background:var(--gold2);right:9%;top:18%;box-shadow:0 0 15px var(--gold)}
-    .v3{position:absolute;right:0;bottom:15%;font-size:11px;letter-spacing:.25em;color:#aeb7c2;text-transform:uppercase}
-    section{position:relative;z-index:2}
-    .features{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:rgba(1,4,8,.92)}
-    .feature-grid{width:min(1180px,calc(100% - 48px));margin:auto;display:grid;grid-template-columns:repeat(4,1fr)}
-    .feature{padding:55px 30px 58px 0;margin-right:30px;border-right:1px solid var(--line)}
-    .feature:last-child{border:0;margin-right:0}
-    .icon{font-size:25px;color:var(--gold);margin-bottom:24px}
-    .feature h3{font-size:17px;margin:0 0 11px}
-    .feature p{margin:0;color:#8f98a4;line-height:1.65;font-size:14px}
-    .about{width:min(1180px,calc(100% - 48px));margin:auto;padding:115px 0}
-    .about-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:90px;align-items:center}
-    .section-label{color:var(--gold);font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:17px}
-    h2{font-size:clamp(35px,5vw,58px);line-height:1.03;letter-spacing:-.045em;margin:0 0 24px}
-    .about p{color:#a9b1bb;line-height:1.8;font-size:16px;max-width:570px}
-    .quote-card{min-height:340px;border:1px solid var(--line);border-radius:24px;overflow:hidden;position:relative;background:radial-gradient(circle at 70% 20%,rgba(242,189,114,.17),transparent 30%),linear-gradient(145deg,#101a24,#05090e)}
-    .quote-card:before{content:"";position:absolute;inset:auto -10% -38% -10%;height:65%;background:radial-gradient(ellipse,rgba(242,189,114,.23),transparent 58%)}
-    .mountains{position:absolute;inset:auto 0 0;height:55%;opacity:.4;background:linear-gradient(150deg,transparent 38%,#182b3b 39%,#182b3b 48%,transparent 49%),linear-gradient(30deg,transparent 45%,#243848 46%,#243848 58%,transparent 59%)}
-    .quote{position:absolute;left:38px;bottom:35px;max-width:460px;font-size:24px;line-height:1.45;letter-spacing:-.02em}
-    .quote b{color:var(--gold2);font-weight:500}
-    .how{border-top:1px solid var(--line);background:#03070c;padding:105px 0}
-    .how-inner{width:min(1180px,calc(100% - 48px));margin:auto}
-    .steps{display:grid;grid-template-columns:repeat(4,1fr);margin-top:55px}
-    .step{padding:0 28px 0 0;margin-right:28px;border-right:1px solid var(--line)}
-    .step:last-child{border:0}
-    .num{font-size:12px;color:#697583;letter-spacing:.15em;margin-bottom:18px}
-    .step h3{margin:0 0 9px;font-size:16px}
-    .step p{margin:0;color:#818b97;font-size:14px;line-height:1.65}
-    .development{width:min(1060px,calc(100% - 48px));margin:0 auto 110px;padding:30px 34px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(120deg,rgba(11,25,37,.85),rgba(5,10,16,.65));display:flex;justify-content:space-between;gap:50px;align-items:center}
-    .development h3{font-size:21px;margin:0 0 8px}
-    .development p{color:#89939f;margin:0;line-height:1.6;font-size:14px}
-    .checks{display:grid;gap:10px;color:#aeb6c0;font-size:13px;min-width:300px}
-    .checks span:before{content:"✓";color:var(--blue);margin-right:10px}
-    footer{border-top:1px solid var(--line);padding:35px 0 42px}
-    .footer-inner{width:min(1180px,calc(100% - 48px));margin:auto;display:flex;justify-content:space-between;align-items:end;gap:30px}
-    .footer-brand{color:#9da6b1;font-size:12px;letter-spacing:.28em}
-    .footer-brand small{display:block;letter-spacing:0;margin-top:9px;color:#66717e}
-    .footer-links{display:flex;gap:24px;color:#7f8995;font-size:12px}
-    .footer-note{color:#59636f;font-size:11px;margin-top:13px;text-align:right}
-    @media(max-width:800px){
-      .hero{min-height:auto}.links{display:none}.hero-content{grid-template-columns:1fr;padding:65px 0 85px}.orb{min-height:270px;order:-1}.z{font-size:190px}.orbit{width:330px;height:125px}.v3{right:10%;bottom:5%}
-      .feature-grid,.steps{grid-template-columns:1fr 1fr}.feature{padding:38px 20px 40px 0;margin-right:20px}.feature:nth-child(2){border-right:0;margin-right:0}.feature:nth-child(3){border-top:1px solid var(--line)}.feature:nth-child(4){border-top:1px solid var(--line)}
-      .about{padding:80px 0}.about-grid{grid-template-columns:1fr;gap:45px}.quote-card{min-height:290px}.development{flex-direction:column;align-items:flex-start}.checks{min-width:0}
+    :root {
+      color-scheme: dark;
+      --ink: #080c10;
+      --surface: #0d1319;
+      --surface-raised: #111a21;
+      --paper: #eff2f2;
+      --muted: #9ca8af;
+      --quiet: #687780;
+      --rule: rgba(208, 222, 228, .15);
+      --blue: #6ab8d5;
+      --gold: #d6ad70;
+      --serif: Georgia, "Times New Roman", serif;
+      --sans: Inter, Sora, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-    @media(max-width:520px){
-      nav,.hero-content,.feature-grid,.about,.how-inner,.footer-inner{width:min(100% - 34px,1180px)}.hero-content{padding-top:35px}.lead{font-size:16px}.status{width:100%;justify-content:space-between}.orb{min-height:220px}.z{font-size:145px}.orbit{width:270px;height:100px}.feature-grid,.steps{grid-template-columns:1fr}.feature{border-right:0!important;border-bottom:1px solid var(--line);margin:0;padding-right:0}.feature:last-child{border-bottom:0}.steps{gap:35px}.step{border-right:0;border-bottom:1px solid var(--line);padding:0 0 30px;margin:0}.step:last-child{border:0}.footer-inner{align-items:flex-start;flex-direction:column}.footer-links{flex-wrap:wrap}.footer-note{text-align:left}
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; background: var(--ink); }
+    body { margin: 0; background: var(--ink); color: var(--paper); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+    a { color: inherit; text-decoration: none; }
+    a:focus-visible { outline: 2px solid var(--gold); outline-offset: 5px; }
+    .page { min-height: 100vh; overflow: hidden; }
+    .wrap { width: min(1240px, calc(100% - 64px)); margin-inline: auto; }
+    .topline { border-bottom: 1px solid var(--rule); color: var(--muted); font-size: 10px; letter-spacing: .17em; text-transform: uppercase; }
+    .topline-inner { min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .topline-label { display: inline-flex; align-items: center; gap: 9px; }
+    .topline-label::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+    .topline-index { color: var(--quiet); }
+    nav { position: relative; z-index: 2; width: min(1240px, calc(100% - 64px)); min-height: 86px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 36px; border-bottom: 1px solid var(--rule); }
+    .brand { display: inline-flex; align-items: center; gap: 12px; flex: 0 0 auto; font-size: 13px; font-weight: 600; letter-spacing: .28em; }
+    .brand-mark { display: block; width: 35px; height: 35px; flex: 0 0 35px; object-fit: contain; }
+    .nav-right { display: flex; align-items: center; gap: 40px; }
+    .links { display: flex; align-items: center; gap: clamp(18px, 2.7vw, 36px); color: #c1c9cd; font-size: 12px; }
+    .links a, .footer-links a { transition: color .2s ease; }
+    .links a:hover, .footer-links a:hover { color: var(--gold); }
+    .nav-state { border-left: 1px solid var(--rule); padding-left: 20px; color: var(--quiet); font-size: 9px; letter-spacing: .14em; line-height: 1.55; text-transform: uppercase; }
+    .nav-state strong { display: block; color: var(--paper); font-weight: 500; }
+    .hero { position: relative; isolation: isolate; }
+    .hero::before { content: ""; position: absolute; z-index: -1; inset: 0 0 auto; height: 100%; pointer-events: none; background: linear-gradient(90deg, transparent calc(50% - .5px), rgba(208,222,228,.055) 50%, transparent calc(50% + .5px)); }
+    .hero-grid { min-height: 615px; padding-block: 70px 84px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .83fr); align-items: center; gap: clamp(46px, 8vw, 118px); }
+    .hero-copy { max-width: 680px; }
+    .eyebrow, .section-kicker { margin: 0 0 24px; color: var(--blue); font-size: 10px; font-weight: 600; letter-spacing: .19em; line-height: 1.5; text-transform: uppercase; }
+    .eyebrow span { color: var(--quiet); margin-right: 10px; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { max-width: 720px; margin-bottom: 26px; font-family: var(--serif); font-size: clamp(58px, 7vw, 94px); font-weight: 400; letter-spacing: -.055em; line-height: .98; }
+    h1 em { color: var(--gold); font-style: normal; }
+    .hero-intro { max-width: 550px; margin-bottom: 34px; color: #bdc7cb; font-size: clamp(15px, 1.4vw, 18px); line-height: 1.75; }
+    .hero-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 18px 28px; }
+    .hero-link { display: inline-flex; align-items: center; gap: 14px; color: var(--paper); font-size: 12px; font-weight: 500; }
+    .hero-link::after { content: "↗"; color: var(--gold); font-size: 16px; transition: transform .2s ease; }
+    .hero-link:hover::after { transform: translate(3px, -3px); }
+    .hero-status { display: inline-flex; align-items: center; gap: 9px; padding-left: 20px; border-left: 1px solid var(--rule); color: var(--muted); font-size: 10px; letter-spacing: .06em; }
+    .hero-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 4px rgba(214,173,112,.1); }
+    .protocol-figure { position: relative; min-height: 430px; margin: 0; padding: 23px; border: 1px solid var(--rule); background: var(--surface); }
+    .protocol-figure::before, .protocol-figure::after { content: ""; position: absolute; width: 17px; height: 17px; pointer-events: none; }
+    .protocol-figure::before { top: -1px; left: -1px; border-top: 1px solid var(--blue); border-left: 1px solid var(--blue); }
+    .protocol-figure::after { right: -1px; bottom: -1px; border-right: 1px solid var(--gold); border-bottom: 1px solid var(--gold); }
+    .figure-head { display: flex; justify-content: space-between; gap: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--rule); color: var(--quiet); font-size: 9px; letter-spacing: .16em; text-transform: uppercase; }
+    .figure-head strong { color: var(--paper); font-weight: 500; }
+    .scheme { position: relative; min-height: 300px; padding: 32px 8px 18px; display: grid; grid-template-columns: 1fr 74px 1fr; grid-template-rows: 1fr 94px 1fr; align-items: center; gap: 8px 0; }
+    .scheme-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+    .scheme-lines path { fill: none; stroke: rgba(178,197,204,.36); stroke-width: 1; vector-effect: non-scaling-stroke; }
+    .scheme-lines .flow { stroke: var(--blue); stroke-dasharray: 2 7; animation: flow 10s linear infinite; }
+    .scheme-lines circle { fill: var(--gold); }
+    @keyframes flow { to { stroke-dashoffset: -36; } }
+    .node { position: relative; z-index: 1; width: min(100%, 152px); min-height: 61px; padding: 12px 13px; border: 1px solid rgba(208,222,228,.2); background: var(--surface); }
+    .node small { display: block; margin-bottom: 7px; color: var(--quiet); font-size: 8px; letter-spacing: .15em; text-transform: uppercase; }
+    .node strong { display: block; color: var(--paper); font-size: 11px; font-weight: 500; }
+    .node-party-a { grid-column: 1; grid-row: 1; justify-self: start; }
+    .node-party-b { grid-column: 3; grid-row: 1; justify-self: end; }
+    .node-rules { grid-column: 2; grid-row: 2; justify-self: center; width: 96px; min-height: 76px; display: grid; align-content: center; text-align: center; border-color: rgba(106,184,213,.55); box-shadow: 0 0 0 5px rgba(106,184,213,.045); }
+    .node-rules small { color: var(--blue); }
+    .node-outcome { grid-column: 1 / 4; grid-row: 3; justify-self: center; width: min(100%, 190px); text-align: center; border-color: rgba(214,173,112,.42); }
+    .figure-foot { display: flex; justify-content: space-between; align-items: center; gap: 15px; padding-top: 15px; border-top: 1px solid var(--rule); color: var(--quiet); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
+    .figure-foot strong { color: var(--gold); font-weight: 500; }
+    .feature-band { border-block: 1px solid var(--rule); background: #0b1015; }
+    .feature-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+    .feature { min-height: 178px; padding: 26px 25px 28px 0; border-right: 1px solid var(--rule); }
+    .feature + .feature { padding-left: 25px; }
+    .feature:last-child { border-right: 0; }
+    .feature-no, .step-no { display: block; margin-bottom: 26px; color: var(--blue); font-size: 9px; letter-spacing: .14em; }
+    .feature h2 { margin-bottom: 9px; font-family: var(--sans); font-size: 14px; font-weight: 600; letter-spacing: -.015em; line-height: 1.35; }
+    .feature p { margin-bottom: 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+    .bridge { padding-block: 105px 112px; border-bottom: 1px solid var(--rule); }
+    .bridge-grid { display: grid; grid-template-columns: .78fr 1.22fr; gap: clamp(48px, 7vw, 100px); align-items: center; }
+    .bridge-copy { max-width: 440px; }
+    .bridge-title { margin-bottom: 22px; font-family: var(--serif); font-size: clamp(37px, 4.5vw, 56px); font-weight: 400; letter-spacing: -.045em; line-height: 1.04; }
+    .bridge-copy p:not(.section-kicker) { margin-bottom: 15px; color: #adb9be; font-size: 13px; line-height: 1.8; }
+    .bridge-copy strong { color: var(--paper); font-weight: 500; }
+    .bridge-map { padding: 18px 0; border-block: 1px solid var(--rule); }
+    .bridge-map-head { display: flex; justify-content: space-between; gap: 18px; margin-bottom: 19px; color: var(--quiet); font-size: 9px; letter-spacing: .15em; text-transform: uppercase; }
+    .bridge-flow { display: grid; grid-template-columns: minmax(112px, 1fr) 28px minmax(155px, 1.2fr) 28px minmax(112px, 1fr); align-items: center; gap: 9px; }
+    .bridge-stage { min-height: 160px; padding: 16px 14px; border: 1px solid var(--rule); background: var(--surface); }
+    .bridge-stage-index { display: block; margin-bottom: 24px; color: var(--quiet); font-size: 8px; letter-spacing: .13em; text-transform: uppercase; }
+    .bridge-stage h3 { margin-bottom: 12px; font-size: 12px; font-weight: 600; letter-spacing: .1em; }
+    .bridge-stage p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.75; }
+    .bridge-stage-web3 h3 { color: var(--blue); }
+    .bridge-stage-world h3 { color: var(--gold); }
+    .bridge-core { position: relative; min-height: 184px; display: flex; flex-direction: column; justify-content: center; border-color: rgba(214,173,112,.55); background: #11181d; }
+    .bridge-core::before { content: ""; position: absolute; top: -1px; left: 14px; width: 35px; height: 2px; background: var(--gold); }
+    .bridge-core .bridge-stage-index { color: var(--gold); }
+    .bridge-core h3 { font-family: var(--serif); font-size: 21px; font-weight: 400; letter-spacing: -.02em; }
+    .bridge-core p { color: #c0c9cc; }
+    .bridge-connector { color: var(--blue); font-size: 17px; text-align: center; }
+    .bridge-map-foot { margin: 18px 0 0; color: var(--quiet); font-size: 9px; line-height: 1.6; }
+    .about { padding-block: 125px; }
+    .about-grid { display: grid; grid-template-columns: .8fr 1.2fr; gap: clamp(50px, 9vw, 140px); align-items: center; }
+    .section-kicker { margin-bottom: 19px; color: var(--gold); }
+    h2.editorial-title { max-width: 510px; margin-bottom: 25px; font-family: var(--serif); font-size: clamp(40px, 5.2vw, 64px); font-weight: 400; letter-spacing: -.045em; line-height: 1.03; }
+    .about-copy p:not(.section-kicker) { max-width: 560px; margin-bottom: 16px; color: #adb9be; font-size: 14px; line-height: 1.8; }
+    .principle { position: relative; min-height: 320px; padding: 32px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--rule); background: var(--surface); }
+    .principle::before { content: ""; position: absolute; top: 0; left: 32px; width: 56px; height: 2px; background: var(--gold); }
+    .principle-label { color: var(--quiet); font-size: 9px; letter-spacing: .16em; text-transform: uppercase; }
+    .principle blockquote { max-width: 580px; margin: 38px 0; font-family: var(--serif); font-size: clamp(26px, 3.3vw, 42px); letter-spacing: -.035em; line-height: 1.22; }
+    .principle blockquote strong { color: var(--gold); font-weight: 400; }
+    .principle-foot { display: flex; justify-content: space-between; align-items: center; gap: 20px; color: var(--quiet); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
+    .principle-foot span:last-child { color: var(--blue); }
+    .method { padding-block: 105px 120px; border-block: 1px solid var(--rule); background: var(--surface); }
+    .method-head { display: grid; grid-template-columns: .8fr 1.2fr; gap: clamp(50px, 9vw, 140px); align-items: end; }
+    .method-head .section-kicker { margin-bottom: 17px; }
+    .method-head h2 { max-width: 600px; margin-bottom: 0; font-family: var(--serif); font-size: clamp(38px, 5vw, 62px); font-weight: 400; letter-spacing: -.045em; line-height: 1.02; }
+    .steps { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 62px; border-top: 1px solid var(--rule); }
+    .step { position: relative; min-height: 190px; padding: 22px 22px 12px 0; border-right: 1px solid var(--rule); }
+    .step + .step { padding-left: 22px; }
+    .step:last-child { border-right: 0; }
+    .step::before { content: ""; position: absolute; top: -3px; left: 0; width: 5px; height: 5px; border-radius: 50%; background: var(--blue); }
+    .step h3 { margin-bottom: 10px; font-size: 14px; font-weight: 600; }
+    .step p { max-width: 230px; margin-bottom: 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .development { padding-block: 92px 110px; }
+    .development-panel { display: grid; grid-template-columns: 1.1fr .9fr; gap: 50px; padding: 34px 0; border-block: 1px solid var(--rule); }
+    .development-title { max-width: 570px; margin-bottom: 13px; font-family: var(--serif); font-size: clamp(34px, 4vw, 50px); font-weight: 400; letter-spacing: -.04em; line-height: 1.05; }
+    .development-copy { max-width: 470px; margin-bottom: 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .development-state { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px; color: var(--gold); font-size: 9px; letter-spacing: .16em; text-transform: uppercase; }
+    .development-state::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--gold); }
+    .checks { align-self: center; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 24px; }
+    .checks span { display: flex; align-items: flex-start; gap: 10px; color: #bdc7cb; font-size: 11px; line-height: 1.5; }
+    .checks span::before { content: ""; width: 13px; height: 1px; flex: 0 0 13px; margin-top: .6em; background: var(--blue); }
+    footer { border-top: 1px solid var(--rule); }
+    .footer-inner { min-height: 110px; display: flex; align-items: center; justify-content: space-between; gap: 28px; }
+    .footer-brand { color: #dce2e3; font-size: 11px; letter-spacing: .24em; }
+    .footer-brand small { display: block; margin-top: 7px; color: var(--quiet); font-size: 10px; letter-spacing: 0; }
+    .footer-right { display: flex; align-items: center; gap: 35px; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: 20px; color: var(--muted); font-size: 10px; }
+    .footer-note { color: var(--quiet); font-size: 9px; letter-spacing: .08em; }
+    @media (max-width: 980px) {
+      .wrap, nav { width: min(100% - 48px, 1240px); }
+      .hero-grid { min-height: auto; grid-template-columns: 1fr .86fr; gap: 44px; padding-block: 66px 74px; }
+      .nav-right { gap: 24px; }
+      .links { gap: 16px; }
+      .nav-state { display: none; }
+      .protocol-figure { min-height: 390px; padding: 18px; }
+      .scheme { min-height: 270px; grid-template-columns: 1fr 56px 1fr; }
+      .node { padding: 10px; }
+      .bridge-grid { grid-template-columns: 1fr; gap: 35px; }
+      .bridge-copy { max-width: 620px; }
+      .about-grid, .method-head { gap: 48px; }
+    }
+    @media (max-width: 720px) {
+      .wrap, nav { width: min(100% - 40px, 1240px); }
+      .topline-inner { min-height: 31px; font-size: 8px; }
+      nav { min-height: 74px; align-items: center; flex-wrap: wrap; gap: 0 18px; padding-block: 14px; }
+      .brand { gap: 9px; font-size: 11px; }
+      .brand-mark { width: 35px; height: 35px; flex-basis: 35px; }
+      .nav-right { flex: 1 1 100%; }
+      .links { width: 100%; justify-content: space-between; gap: 10px; padding-top: 14px; font-size: 10px; }
+      .hero::before { background: linear-gradient(90deg, transparent 19px, rgba(208,222,228,.055) 20px, transparent 21px); }
+      .hero-grid { grid-template-columns: 1fr; gap: 42px; padding-block: 62px 64px; }
+      .hero-copy { max-width: 640px; }
+      .eyebrow { margin-bottom: 20px; }
+      h1 { max-width: 600px; font-size: clamp(56px, 12vw, 78px); }
+      .hero-intro { max-width: 560px; font-size: 15px; }
+      .protocol-figure { width: min(100%, 520px); min-height: 365px; justify-self: center; }
+      .scheme { min-height: 260px; }
+      .feature-grid { grid-template-columns: 1fr 1fr; }
+      .feature { min-height: 155px; padding: 22px 18px 22px 0; }
+      .feature + .feature { padding-left: 18px; }
+      .feature:nth-child(2) { border-right: 0; }
+      .feature:nth-child(n+3) { border-top: 1px solid var(--rule); }
+      .feature-no { margin-bottom: 18px; }
+      .bridge { padding-block: 76px 82px; }
+      .bridge-title { max-width: 600px; }
+      .bridge-flow { grid-template-columns: minmax(0, 1fr) 25px minmax(0, 1.2fr) 25px minmax(0, 1fr); gap: 7px; }
+      .bridge-stage { padding: 14px 12px; }
+      .about { padding-block: 82px; }
+      .about-grid, .method-head { grid-template-columns: 1fr; gap: 34px; }
+      .principle { min-height: 270px; padding: 25px; }
+      .principle::before { left: 25px; }
+      .principle blockquote { margin-block: 30px; }
+      .method { padding-block: 76px 82px; }
+      .steps { grid-template-columns: 1fr 1fr; margin-top: 42px; }
+      .step { min-height: 155px; padding: 20px 20px 18px 0; border-bottom: 1px solid var(--rule); }
+      .step + .step { padding-left: 20px; }
+      .step:nth-child(2) { border-right: 0; }
+      .step:nth-child(3) { padding-left: 0; }
+      .step:nth-child(n+3) { border-bottom: 0; }
+      .development { padding-block: 68px 78px; }
+      .development-panel { grid-template-columns: 1fr; gap: 30px; padding-block: 26px; }
+      .footer-inner { min-height: 130px; align-items: flex-start; flex-direction: column; justify-content: center; gap: 22px; padding-block: 24px; }
+      .footer-right { width: 100%; align-items: flex-start; flex-direction: column; gap: 13px; }
+    }
+    @media (max-width: 420px) {
+      .wrap, nav { width: min(100% - 32px, 1240px); }
+      .topline-index { display: none; }
+      .links { flex-wrap: wrap; justify-content: flex-start; gap: 9px 14px; font-size: 9px; }
+      .hero-grid { gap: 34px; padding-block: 50px 52px; }
+      h1 { font-size: clamp(49px, 13vw, 60px); }
+      .hero-intro { margin-bottom: 26px; font-size: 14px; }
+      .hero-meta { align-items: flex-start; flex-direction: column; gap: 14px; }
+      .hero-status { padding-left: 0; border-left: 0; }
+      .protocol-figure { min-height: 340px; padding: 15px; }
+      .figure-head { font-size: 8px; }
+      .scheme { min-height: 235px; grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1fr); padding-inline: 0; }
+      .node { width: 100%; max-width: 108px; min-height: 56px; padding: 9px; }
+      .node-rules { width: 82px; min-height: 70px; }
+      .node-outcome { width: 154px; }
+      .node small { font-size: 7px; }
+      .node strong { font-size: 10px; }
+      .figure-foot { font-size: 8px; }
+      .bridge-map { padding-block: 15px; }
+      .bridge-map-head { font-size: 8px; }
+      .bridge-flow { grid-template-columns: 1fr; gap: 8px; }
+      .bridge-stage { min-height: 0; padding: 15px; }
+      .bridge-stage-index { margin-bottom: 12px; }
+      .bridge-stage h3 { margin-bottom: 7px; }
+      .bridge-core { min-height: 0; }
+      .bridge-connector { transform: rotate(90deg); line-height: 1; }
+      .feature { min-height: 170px; padding-right: 12px; }
+      .feature + .feature { padding-left: 12px; }
+      .feature h2 { font-size: 13px; }
+      .feature p, .step p { font-size: 11px; }
+      .checks { gap: 15px 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
     }
   </style>
 </head>
 <body>
 <div class="page">
-  <header class="hero" id="top">
-    <div class="grid"></div>
-    <nav>
-      <a class="brand" href="/" aria-label="Zinesh ana sayfa"><img class="brand-mark" src="/brand/zinesh-mark.png" alt="" width="35" height="35"><span>ZINESH</span></a>
+  <div class="topline">
+    <div class="wrap topline-inner"><span class="topline-label">Anlaşmalar için güven protokolü</span><span class="topline-index">ZINESH / 2025—26</span></div>
+  </div>
+  <nav aria-label="Ana gezinme">
+    <a class="brand" href="/" aria-label="Zinesh ana sayfa"><img class="brand-mark" src="/brand/zinesh-mark.png" alt="" width="35" height="35"><span>ZINESH</span></a>
+    <div class="nav-right">
       <div class="links">
-        <a href="#nedir">Nedir?</a><a href="#neden">Neden?</a><a href="#nasil">Nasıl Çalışır?</a><a href="#gelistirme">Geliştirme</a><a href="/blog/">Blog</a>
+        <a href="#web3">Web3 × Dünya</a><a href="#nedir">Nedir?</a><a href="#neden">Neden?</a><a href="#nasil">Nasıl çalışır?</a><a href="#gelistirme">Geliştirme</a><a href="/blog/">Blog</a>
       </div>
-    </nav>
-    <div class="hero-content">
-      <div>
-        <div class="eyebrow">Zinesh Protocol</div>
-        <h1>Zinesh<span>Güvenin yeni altyapısı.</span></h1>
-        <p class="lead">Dijital dünya ile gerçek dünya arasındaki ticarette güveni, teknolojiyi ve kuralları yeniden tanımlıyoruz.</p>
-        <div class="status"><div><small>Geliştirme durumu</small><strong>Zinesh şu anda geliştiriliyor.<br>Çok yakında sizlerle.</strong></div><span class="arrow">→</span></div>
+      <div class="nav-state">Geliştirme<strong>V3 / devam ediyor</strong></div>
+    </div>
+  </nav>
+
+  <main>
+    <header class="hero" id="top">
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow"><span>01 /</span> Güven protokolü</p>
+          <h1>Güvenin yeni <em>altyapısı.</em></h1>
+          <p class="hero-intro">Zinesh, birbirini tanımayan tarafların ticaret ve hizmet anlaşmalarını güvenle yürütebilmesi için geliştirilen bir protokol katmanıdır. Koşulları yazılı hale getirir, emanet adımlarını anlaşmaya bağlar ve sürecin nasıl sonuçlanacağını baştan görünür kılar.</p>
+          <div class="hero-meta"><a class="hero-link" href="#nasil">Protokolü keşfet</a><span class="hero-status">Zinesh V3 geliştiriliyor</span></div>
+        </div>
+
+        <figure class="protocol-figure" aria-labelledby="protocol-caption">
+          <figcaption class="figure-head" id="protocol-caption"><strong>İşlem modeli</strong><span>Protokol / 01</span></figcaption>
+          <div class="scheme" aria-label="Taraflar, önceden belirlenen kurallarla güvenli bir sonuca ulaşır">
+            <svg class="scheme-lines" viewBox="0 0 500 300" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M75 42H190L250 150L310 42H425M250 150V250"></path>
+              <path class="flow" d="M75 42H190L250 150L310 42H425M250 150V250"></path>
+              <circle cx="75" cy="42" r="3"></circle><circle cx="425" cy="42" r="3"></circle><circle cx="250" cy="250" r="3"></circle>
+            </svg>
+            <div class="node node-party-a"><small>Taraf 01</small><strong>Alıcı / işveren</strong></div>
+            <div class="node node-party-b"><small>Taraf 02</small><strong>Satıcı / uzman</strong></div>
+            <div class="node node-rules"><small>Kurallar</small><strong>Sözleşme + emanet</strong></div>
+            <div class="node node-outcome"><small>Koşullar tamamlandığında</small><strong>Kayıtlı sonuç</strong></div>
+          </div>
+          <div class="figure-foot"><span>Taraflar anlaşır</span><strong>Protokol süreci taşır</strong></div>
+        </figure>
       </div>
-      <div class="orb" aria-hidden="true"><div class="orbit"></div><div class="z">Z</div><div class="v3">Zinesh V3</div></div>
-    </div>
-  </header>
+    </header>
 
-  <section class="features" id="neden">
-    <div class="feature-grid">
-      <article class="feature"><div class="icon">♢</div><h3>Daha güvenli ticaret</h3><p>Taraflar birbirine körü körüne güvenmek zorunda değil. Kurallar ve teknoloji güvenin yerini alır.</p></article>
-      <article class="feature"><div class="icon">◇</div><h3>Dijital ve gerçek dünyayı birleştirir</h3><p>Dijital teknolojileri günlük ticaretin gerçek ihtiyaçlarıyla buluşturur.</p></article>
-      <article class="feature"><div class="icon">▤</div><h3>Şeffaf ve adil</h3><p>Süreçler açık, izlenebilir ve önceden belirlenen kurallara bağlıdır.</p></article>
-      <article class="feature"><div class="icon">◌</div><h3>Herkes için</h3><p>Bireyler, küçük işletmeler ve profesyoneller için daha eşit bir ticaret ortamı hedefler.</p></article>
-    </div>
-  </section>
-
-  <section class="about" id="nedir">
-    <div class="about-grid">
-      <div>
-        <div class="section-label">Zinesh nedir?</div>
-        <h2>Güven sorununu teknolojiyle çözmek.</h2>
-        <p>Zinesh, dijital dünyada ve gerçek dünyada gerçekleşen ticaretin güven sorununu çözmek için geliştirilen bir Güven Protokolüdür.</p>
-        <p>Taraflar birbirini tanımasa bile, akıllı kurallar ve teknoloji sayesinde güvenli bir şekilde işlem yapabilmeleri için bir altyapı oluşturuyoruz.</p>
+    <section class="feature-band" id="neden" aria-label="Protokol ilkeleri">
+      <div class="wrap feature-grid">
+        <article class="feature"><span class="feature-no">01 — Sorun</span><h2>Risk iki tarafta da</h2><p>Alıcı, ödeme yaptığı halde işi alamamaktan; hizmet sağlayıcı ise işi teslim edip ücretini tahsil edememekten çekinir. Güven sorunu tek taraflı değildir.</p></article>
+        <article class="feature"><span class="feature-no">02 — Mevcut boşluk</span><h2>Aracıya bağımlılık</h2><p>Pazaryeri kuralları çoğu zaman platforma özeldir; kişisel referanslar ise tarafların anlaşmasını veya ödemenin ne zaman aktarılacağını güvenceye almaz.</p></article>
+        <article class="feature"><span class="feature-no">03 — İhtiyaç</span><h2>Anlaşma uygulanabilir olmalı</h2><p>Koşullar, ödeme ve teslim adımları aynı süreçte açıkça tanımlanmalı; taraflar neyin beklendiğini ve hangi durumda ne olacağını önceden bilmelidir.</p></article>
+        <article class="feature"><span class="feature-no">04 — Yaklaşım</span><h2>Tarafsız bir süreç</h2><p>Zinesh tarafları bulmayı ya da pazaryeri olmayı değil, zaten yapılmış anlaşmayı kurallı ve izlenebilir bir emanet süreciyle korumayı hedefler.</p></article>
       </div>
-      <div class="quote-card"><div class="mountains"></div><div class="quote">Daha açık.<br><b>Daha güvenli.</b><br>Daha adil bir ticaret mümkün.</div></div>
-    </div>
-  </section>
+    </section>
 
-  <section class="how" id="nasil">
-    <div class="how-inner">
-      <div class="section-label">Temel fikir</div>
-      <h2>Güven, kişilere değil<br>kurallara dayanır.</h2>
-      <div class="steps">
-        <article class="step"><div class="num">01</div><h3>Taraflar anlaşır</h3><p>Hizmet veya ürün üzerindeki koşullar önceden belirlenir.</p></article>
-        <article class="step"><div class="num">02</div><h3>Emanet sistemi</h3><p>Belirlenen şartlara göre işlem güvenli bir yapıda tutulur.</p></article>
-        <article class="step"><div class="num">03</div><h3>Kurallar işler</h3><p>Tanımlanan koşullar gerçekleştiğinde sistem süreci ilerletir.</p></article>
-        <article class="step"><div class="num">04</div><h3>Güvenli sonuç</h3><p>Her iki taraf için daha şeffaf ve öngörülebilir bir sonuç hedeflenir.</p></article>
+    <section class="bridge" id="web3" aria-labelledby="bridge-title">
+      <div class="wrap bridge-grid">
+        <div class="bridge-copy">
+          <p class="section-kicker">02 / Web3 × gerçek dünya</p>
+          <h2 class="bridge-title" id="bridge-title">Web3'ün doğrulanabilirliği, gerçek dünyadaki ilişkilere uzansın.</h2>
+          <p>Web3; dijital kayıtların doğrulanması, işlem geçmişinin paylaşılabilir olması ve kuralların birden fazla tarafça denetlenebilmesi için yeni araçlar sunar. Blockchain bu araçlardan biridir: belirli kayıtların sonradan sessizce değiştirilmesini zorlaştırabilir.</p>
+          <p>Ancak gerçek dünyadaki işi kimin yaptığı, teslimatın beklentiyi karşılayıp karşılamadığı ve bir anlaşmazlığın nasıl ele alınacağı yalnızca zincire veri yazmakla çözülmez. <strong>Zinesh, bu doğrulanabilir altyapı ile ticaretin insani ve operasyonel koşulları arasındaki boşluğu ele alır.</strong></p>
+          <p>Bu nedenle Zinesh klasik anlamda bir blockchain projesi değildir. Blockchain, gerektiğinde belirli kayıtları doğrulamaya yarayan bir altyapı bileşenidir; asıl ürün, anlaşmayı, emanet adımlarını, kanıtları ve sonucu birbirine bağlayan Zinesh Trust Layer'dır.</p>
+        </div>
+        <figure class="bridge-map" aria-labelledby="bridge-map-title">
+          <figcaption class="bridge-map-head" id="bridge-map-title"><strong>Teknoloji ve gerçek hayat</strong><span>Katman ilişkisi / 02</span></figcaption>
+          <div class="bridge-flow" aria-label="Web3 ve blockchain altyapısı, Zinesh Trust Layer üzerinden gerçek dünyadaki ticaret ve hizmet ilişkilerine bağlanır">
+            <div class="bridge-stage bridge-stage-web3">
+              <span class="bridge-stage-index">Doğrulanabilir altyapı</span>
+              <h3>WEB3</h3>
+              <p>Şeffaf kayıtlar<br>Doğrulanabilir işlemler<br>Blockchain altyapısı</p>
+            </div>
+            <span class="bridge-connector" aria-hidden="true">→</span>
+            <div class="bridge-stage bridge-core">
+              <span class="bridge-stage-index">Protokol katmanı</span>
+              <h3>Zinesh Trust Layer</h3>
+              <p>Anlaşmalar · kurallar · güvenli süreç</p>
+            </div>
+            <span class="bridge-connector" aria-hidden="true">→</span>
+            <div class="bridge-stage bridge-stage-world">
+              <span class="bridge-stage-index">Sahadaki ilişkiler</span>
+              <h3>GERÇEK DÜNYA</h3>
+              <p>Ticaret ve hizmet<br>Anlaşma · teslim · sonuç</p>
+            </div>
+          </div>
+          <p class="bridge-map-foot">Blockchain kayıtların doğrulanmasına katkı sağlar; taraflar arası anlaşmayı ve gerçek dünyadaki sonucu tek başına yönetmez.</p>
+        </figure>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section id="gelistirme">
-    <div class="development">
-      <div><div class="section-label">Şu anda</div><h3>Zinesh V3 geliştirme aşamasında.</h3><p>Daha güçlü, daha modüler ve daha güvenli bir altyapı üzerinde çalışıyoruz.</p></div>
-      <div class="checks"><span>Mimari yeniden tasarlanıyor</span><span>Güven katmanı güçlendiriliyor</span><span>Daha geniş kullanım senaryoları hazırlanıyor</span><span>Teknik dokümantasyon geliştiriliyor</span></div>
-    </div>
-  </section>
+    <section class="about wrap" id="nedir">
+      <div class="about-grid">
+        <div class="about-copy">
+          <p class="section-kicker">03 / Zinesh nedir?</p>
+          <h2 class="editorial-title">Anlaşmayı, ödeme ve teslimatla birlikte düşünür.</h2>
+          <p>Zinesh; tarafların zaten üzerinde uzlaştığı ürün veya hizmet anlaşmasını yazılı koşullara, emanet adımlarına ve işlem kayıtlarına bağlayan bir güven protokolüdür. Bir pazar yeri değildir; kullanıcı bulmaz, fiyat belirlemez ve tarafların yerine ticari karar vermez.</p>
+          <p>Alıcı ve hizmet sağlayıcı, kapsamı ve teslim koşullarını belirler. Zinesh bu anlaşmayı süreç içinde görünür kılar; ödeme emanet aşamasına alınır, gerekli onaylar izlenir ve koşullar tamamlandığında sonuç kayda geçirilir. Böylece tarafların hafızasına veya tek bir platformun sözlü vaadine dayanan süreç, önceden tanımlanmış adımlarla yürür.</p>
+        </div>
+        <div class="principle">
+          <span class="principle-label">Trust Layer / temel işlev</span>
+          <blockquote>Anlaşma<br><strong>kurallara</strong><br>ve kanıta bağlanır.</blockquote>
+          <div class="principle-foot"><span>Koşul · emanet · sonuç</span><span>Z / TRUST LAYER</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="method" id="nasil">
+      <div class="wrap">
+        <div class="method-head">
+          <p class="section-kicker">04 / Temel fikir</p>
+          <h2>Trust Layer, anlaşmayı<br>işleyen sürece dönüştürür.</h2>
+        </div>
+        <div class="steps">
+          <article class="step"><span class="step-no">01</span><h3>Koşullar yazılır</h3><p>Taraflar kapsamı, bedeli, teslim biçimini ve kabul ölçütlerini kendi anlaşmalarına göre belirler. Zinesh, pazarlığı yapmaz; üzerinde uzlaşılan koşulları sürecin referansı haline getirir.</p></article>
+          <article class="step"><span class="step-no">02</span><h3>Emanet başlar</h3><p>Ödeme, anlaşmadaki adımlara bağlı bir emanet sürecine alınır. Böylece alıcının parası iş tamamlanmadan serbestçe aktarılmaz; sağlayıcı da ödemenin sürece dahil olduğunu görebilir.</p></article>
+          <article class="step"><span class="step-no">03</span><h3>İş ve kanıt izlenir</h3><p>Teslim, onay ve itiraz gibi önemli adımlar işlem kaydına bağlanır. Gerçek dünyadaki teslimatı yalnızca bir zincir kaydından çıkarmak mümkün değildir; hedeflenen hakemlik akışı kanıtları ve tarafların açıklamalarını birlikte değerlendirecektir.</p></article>
+          <article class="step"><span class="step-no">04</span><h3>Sonuç uygulanır</h3><p>Kararlaştırılan koşullar ve onaylar tamamlanınca emanet serbest bırakılır; uyuşmazlık halinde inceleme gerekir. Hedef, sonucun taraflarca anlaşılır ve geriye dönük izlenebilir olmasıdır.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="development wrap" id="gelistirme">
+      <div class="development-panel">
+        <div>
+          <span class="development-state">Şu anda / V3</span>
+          <h2 class="development-title">Zinesh V3 geliştirme aşamasında.</h2>
+          <p class="development-copy">Bugünkü üretim sistemi TL emanetini merkezi sunucu ve API üzerinden yürütür; herkese açık blockchain doğrulaması şu anda kullanılmıyor. V3 çalışması güven katmanını daha modüler, denetlenebilir ve yeni işlem türlerine uyarlanabilir hale getirmeyi hedefliyor. Uzun vadeli yön, farklı ticaret ilişkilerinde anlaşma koşullarını ve işlem kanıtlarını güvenilir biçimde taşıyan bir protokol olmaktır. Zincir üstü bileşenler bu mimaride amaç değil, gerektiği yerde kullanılabilecek araçlardır.</p>
+        </div>
+        <div class="checks">
+          <span>Üretimdeki merkezi TL emanet akışından modüler bileşenlere geçiş planlanıyor</span><span>Anlaşma, emanet ve kanıt kayıtlarının tutarlılığı güçlendiriliyor</span><span>Çok taraflı işlemler ve farklı ticaret senaryoları değerlendiriliyor</span><span>Blockchain bağlantısı, yalnızca doğrulanabilirlik ihtiyacı olan noktalarda ele alınıyor</span>
+        </div>
+      </div>
+    </section>
+  </main>
 
   <footer>
-    <div class="footer-inner">
+    <div class="wrap footer-inner">
       <div class="footer-brand">ZINESH<small>Güvenin yeni altyapısı.</small></div>
-      <div><div class="footer-links"><a href="#nedir">Nedir?</a><a href="#neden">Neden?</a><a href="#nasil">Nasıl Çalışır?</a><a href="/blog/">Blog</a><a href="https://github.com/cromles/zinesh-protocol" target="_blank" rel="noopener">GitHub</a></div><div class="footer-note">Zinesh V3 — Çok yakında sizlerle.</div></div>
+      <div class="footer-right">
+        <div class="footer-links"><a href="#web3">Web3 × Dünya</a><a href="#nedir">Nedir?</a><a href="#neden">Neden?</a><a href="#nasil">Nasıl çalışır?</a><a href="/blog/">Blog</a><a href="https://github.com/cromles/zinesh-protocol" target="_blank" rel="noopener">GitHub</a></div>
+        <div class="footer-note">Uzun vadeli yön: açık, kanıta dayalı ticaret protokolü.</div>
+      </div>
     </div>
   </footer>
 </div>
