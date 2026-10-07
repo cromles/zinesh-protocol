@@ -37,8 +37,7 @@
     .grid{position:absolute;inset:0;opacity:.16;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:72px 72px;mask-image:linear-gradient(to bottom,black,transparent 75%)}
     nav{position:relative;z-index:5;width:min(1180px,calc(100% - 48px));margin:0 auto;padding:27px 0;display:flex;align-items:center;justify-content:space-between}
     .brand{display:flex;align-items:center;gap:13px;letter-spacing:.34em;font-size:14px;font-weight:500}
-    .mark{width:35px;height:35px;position:relative;display:grid;place-items:center;font-size:28px;font-weight:300;line-height:1;transform:skew(-8deg)}
-    .mark:before{content:"";position:absolute;inset:2px 1px;border-top:1px solid #fff;border-left:1px solid transparent;border-right:1px solid #fff;transform:skew(-15deg)}
+    .brand-mark{display:block;width:35px;height:35px;flex:0 0 35px;object-fit:contain}
     .links{display:flex;gap:30px;color:#b8c0ca;font-size:13px}
     .links a:hover{color:#fff}
     .hero-content{position:relative;z-index:3;width:min(1180px,calc(100% - 48px));margin:auto;display:grid;grid-template-columns:1.05fr .95fr;align-items:center;gap:40px;padding:55px 0 110px}
@@ -109,7 +108,7 @@
   <header class="hero" id="top">
     <div class="grid"></div>
     <nav>
-      <a class="brand" href="/"><span class="mark">Z</span><span>ZINESH</span></a>
+      <a class="brand" href="/" aria-label="Zinesh ana sayfa"><img class="brand-mark" src="/brand/zinesh-mark.png" alt="" width="35" height="35"><span>ZINESH</span></a>
       <div class="links">
         <a href="#nedir">Nedir?</a><a href="#neden">Neden?</a><a href="#nasil">Nasıl Çalışır?</a><a href="#gelistirme">Geliştirme</a><a href="/blog/">Blog</a>
       </div>
