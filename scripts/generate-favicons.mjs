@@ -11,33 +11,15 @@ const candidates = ['zinesh-logo.png', 'zinesh-logo.jpg', 'zinesh-logo.webp'];
 const src = candidates.map((name) => path.join(brandDir, name)).find((p) => fs.existsSync(p));
 const outDir = path.join(root, 'public');
 
-/** Google / favicon: kare çerçeve + Z — küçük boyutlarda kalın çizgi (SERP okunurluğu). */
-function googleMarkSvg(size = 512) {
-  const isSmall = size <= 48;
-  const pad = Math.round(size * (isSmall ? 0.14 : 0.2));
-  const arm = Math.round(size * (isSmall ? 0.12 : 0.1));
-  const stroke = isSmall ? Math.max(2, Math.round(size * 0.09)) : Math.max(2, Math.round(size * 0.016));
-  const fontSize = isSmall ? Math.round(size * 0.44) : Math.round(size * 0.26);
-  const textY = Math.round(size * (isSmall ? 0.62 : 0.58));
-  const x1 = pad;
-  const x2 = size - pad;
-  const y1 = pad;
-  const y2 = size - pad;
-  const xa = x1 + arm;
-  const ya = y1 + arm;
-  const xb = x2 - arm;
-  const yb = y2 - arm;
+if (!src) throw new Error('The Zinesh logo source public/brand/zinesh-logo.png is required.');
 
-  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" fill="#020204"/>
-  <g fill="none" stroke="#ffffff" stroke-width="${stroke}" stroke-linecap="square" stroke-linejoin="miter">
-    <polyline points="${x1},${ya} ${x1},${y1} ${xa},${y1}"/>
-    <polyline points="${xb},${y1} ${x2},${y1} ${x2},${ya}"/>
-    <polyline points="${x2},${yb} ${x2},${y2} ${xb},${y2}"/>
-    <polyline points="${xa},${y2} ${x1},${y2} ${x1},${yb}"/>
-  </g>
-  <text x="${size / 2}" y="${textY}" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="${fontSize}" font-weight="700" fill="#ffffff">Z</text>
-</svg>`);
+/** Center-crop to a square while keeping the complete logo artwork in frame. */
+async function squareLogo(size) {
+  const { width = size, height = size } = await sharp(src).metadata();
+  const side = Math.min(width, height);
+  return sharp(src)
+    .extract({ left: Math.floor((width - side) / 2), top: Math.floor((height - side) / 2), width: side, height: side })
+    .resize(size, size);
 }
 
 async function starfieldHeaderMark() {
@@ -54,17 +36,12 @@ async function starfieldHeaderMark() {
   });
 }
 
-const googleMark = sharp(googleMarkSvg(512));
-
-await googleMark
-  .clone()
+await squareLogo(512)
   .png({ compressionLevel: 9 })
   .toFile(path.join(outDir, 'google-logo.png'));
 console.log('wrote google-logo.png');
 
-await googleMark
-  .clone()
-  .resize(1024, 1024)
+await squareLogo(1024)
   .png({ compressionLevel: 9 })
   .toFile(path.join(outDir, 'logo-1024.png'));
 console.log('wrote logo-1024.png');
@@ -77,9 +54,7 @@ if (fs.existsSync(ogSource)) {
     .toFile(path.join(outDir, 'og-image.jpg'));
   console.log('wrote og-image.jpg (from og-image-source.png)');
 } else {
-  await googleMark
-    .clone()
-    .resize(1024, 1024)
+  await squareLogo(1024)
     .jpeg({ quality: 92 })
     .toFile(path.join(outDir, 'og-image.jpg'));
   console.log('wrote og-image.jpg');
@@ -90,8 +65,7 @@ const pngBuffers = [];
 
 for (const size of sizes) {
   const file = path.join(outDir, `favicon-${size}x${size}.png`);
-  await sharp(src ?? googleMarkSvg(512))
-    .resize(size, size, { fit: 'cover', position: 'centre' })
+  await squareLogo(size)
     .png({ compressionLevel: 9 })
     .toFile(file);
   console.log('wrote', path.basename(file));
@@ -100,18 +74,10 @@ for (const size of sizes) {
   }
 }
 
-await sharp(src ?? googleMarkSvg(512))
-  .resize(192, 192, { fit: 'cover', position: 'centre' })
+await squareLogo(192)
   .png()
   .toFile(path.join(outDir, 'favicon.png'));
 console.log('wrote favicon.png');
-
-await googleMark
-  .clone()
-  .resize(256, 256)
-  .png({ compressionLevel: 9 })
-  .toFile(path.join(brandDir, 'zinesh-mark.png'));
-console.log('wrote brand/zinesh-mark.png');
 
 const headerMark = await starfieldHeaderMark();
 if (headerMark) {
