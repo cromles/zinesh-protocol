@@ -71,8 +71,11 @@
     .hero-link { display: inline-flex; align-items: center; gap: 14px; color: var(--paper); font-size: 12px; font-weight: 500; }
     .hero-link::after { content: "↗"; color: var(--gold); font-size: 16px; transition: transform .2s ease; }
     .hero-link:hover::after { transform: translate(3px, -3px); }
-    .hero-status { display: inline-flex; align-items: center; gap: 9px; padding-left: 20px; border-left: 1px solid var(--rule); color: var(--muted); font-size: 10px; letter-spacing: .06em; }
-    .hero-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 4px rgba(214,173,112,.1); }
+    .hero-status { position: relative; display: inline-flex; align-items: center; gap: 9px; padding-left: 20px; border-left: 1px solid var(--rule); color: var(--muted); font-size: 10px; letter-spacing: .06em; }
+    .hero-status::before { content: ""; width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 4px rgba(214,173,112,.1); animation: developmentPulse 2.8s ease-in-out infinite; }
+    .hero-status::after { content: ""; position: absolute; left: 20px; bottom: -7px; width: 58px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); opacity: .75; transform-origin: left center; animation: developmentScan 3.6s ease-in-out infinite; }
+    @keyframes developmentPulse { 0%, 100% { opacity: .65; box-shadow: 0 0 0 4px rgba(214,173,112,.08); } 50% { opacity: 1; box-shadow: 0 0 0 7px rgba(214,173,112,.02), 0 0 14px rgba(214,173,112,.35); } }
+    @keyframes developmentScan { 0%, 100% { transform: scaleX(.25); opacity: .15; } 45%, 65% { transform: scaleX(1); opacity: .8; } }
     .protocol-figure { position: relative; min-height: 430px; margin: 0; padding: 23px; border: 1px solid var(--rule); background: var(--surface); }
     .protocol-figure::before, .protocol-figure::after { content: ""; position: absolute; width: 17px; height: 17px; pointer-events: none; }
     .protocol-figure::before { top: -1px; left: -1px; border-top: 1px solid var(--blue); border-left: 1px solid var(--blue); }
@@ -279,7 +282,7 @@
           <p class="eyebrow"><span>01 /</span> Güven protokolü</p>
           <h1>Güvenin yeni <em>altyapısı.</em></h1>
           <p class="hero-intro"><strong>Zinesh şu anda geliştirilmeye devam ediyor.</strong><br>Aktif bir ürün değil; geliştirilmekte olan bir protokoldür. V3 altyapısı üzerinde geliştirme çalışmaları sürüyor. Platform tamamlandığında yeniden erişime açılacaktır.</p>
-          <div class="hero-meta"><a class="hero-link" href="#nasil">Protokol yaklaşımını incele</a><span class="hero-status">Aktif ürün değil · geliştirme sürüyor</span></div>
+          <div class="hero-meta"><a class="hero-link" href="#nasil">Protokol yaklaşımını incele</a><span class="hero-status">Geliştirme devam ediyor</span></div>
         </div>
 
         <figure class="protocol-figure" aria-labelledby="protocol-caption">
