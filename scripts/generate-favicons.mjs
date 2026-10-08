@@ -45,7 +45,7 @@ async function starfieldHeaderMark() {
   const meta = await sharp(src).metadata();
   const w = meta.width ?? 1024;
   const h = meta.height ?? 1024;
-  const crop = Math.round(Math.min(w, h) * 0.52);
+  const crop = Math.round(Math.min(w, h) * 0.82);
   return sharp(src).extract({
     left: Math.round((w - crop) / 2),
     top: Math.round((h - crop) / 2),
@@ -90,14 +90,20 @@ const pngBuffers = [];
 
 for (const size of sizes) {
   const file = path.join(outDir, `favicon-${size}x${size}.png`);
-  await sharp(googleMarkSvg(size)).png({ compressionLevel: 9 }).toFile(file);
+  await sharp(src ?? googleMarkSvg(512))
+    .resize(size, size, { fit: 'cover', position: 'centre' })
+    .png({ compressionLevel: 9 })
+    .toFile(file);
   console.log('wrote', path.basename(file));
   if (size <= 96) {
     pngBuffers.push(await sharp(file).png().toBuffer());
   }
 }
 
-await sharp(googleMarkSvg(192)).png().toFile(path.join(outDir, 'favicon.png'));
+await sharp(src ?? googleMarkSvg(512))
+  .resize(192, 192, { fit: 'cover', position: 'centre' })
+  .png()
+  .toFile(path.join(outDir, 'favicon.png'));
 console.log('wrote favicon.png');
 
 await googleMark
