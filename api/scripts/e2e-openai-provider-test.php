@@ -151,6 +151,7 @@ assert_test('mock default when configured', $mockResolved->providerId() === 'moc
 
 putenv('ZINESH_COPILOT_PROVIDER=openai');
 putenv('OPENAI_API_KEY=');
+zinesh_json_write('server_secrets.json', []);
 $fallback = zinesh_copilot_resolve_provider();
 assert_test('missing key falls back to mock', $fallback->providerId() === 'mock');
 
