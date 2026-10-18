@@ -26,7 +26,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
 
       - name: Install frontend dependencies
@@ -34,6 +34,9 @@ jobs:
 
       - name: Run intelligence regression
         run: php api/scripts/run-intelligence-regression.php
+
+      - name: Run V3.2 escrow contract scenarios
+        run: npm run test:escrow-v32
 
       - name: Verify regression artifact
         run: |

@@ -29,6 +29,7 @@
     "test:copilot-evaluation": "tsx scripts/e2e-copilot-evaluation-frontend.ts",
     "test:intelligence-ops-frontend": "tsx scripts/e2e-copilot-framework-test.ts && tsx scripts/e2e-copilot-evaluation-frontend.ts && tsx scripts/e2e-risk-engine-frontend-test.ts",
     "test:intelligence-regression": "php api/scripts/run-intelligence-regression.php",
+    "test:escrow-v32": "hardhat test solidity --chain-type op && node --test tests/escrow-v32-bytecode.test.mjs",
     "check:regression-gate": "py -3 -c \"import sys; from pathlib import Path; sys.path.insert(0, str(Path('scripts').resolve())); from deploy_common import require_intelligence_regression_pass; require_intelligence_regression_pass()\"",
     "google:auth-setup": "node scripts/setup-google-auth.mjs"
   },
@@ -54,7 +55,9 @@
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
     "firebase-tools": "^14.27.0",
+    "hardhat": "^3.20.0",
     "sharp": "^0.35.2",
+    "solc": "^0.8.30",
     "tailwindcss": "^4.1.14",
     "to-ico": "^1.1.5",
     "tsx": "^4.21.0",
