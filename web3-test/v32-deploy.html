@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#07110e">
+    <title>Zinesh V3.2 · Base Sepolia Dağıtımı</title>
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="stylesheet" href="./style.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <a class="brand" href="/" aria-label="Zinesh ana sayfa">ZINESH</a>
+        <span class="network"><i></i> BASE SEPOLIA</span>
+      </header>
+
+      <section class="hero">
+        <p class="eyebrow">V3.2 · DAĞITIM KONSOLU</p>
+        <h1>Süre güvenli<br><em>emanet çekirdeği.</em></h1>
+        <p>Bu özel sayfa denetlenmemiş V3.2 test sözleşmesini Base Sepolia’ya dağıtır. Yalnız ücretsiz test ETH kullanılır.</p>
+      </section>
+
+      <section class="card" aria-labelledby="deploy-title">
+        <div class="card-head">
+          <div><small>DERLENMİŞ SÖZLEŞME</small><h2 id="deploy-title">ZineshEscrowV3_2</h2></div>
+        </div>
+
+        <div id="status" class="status waiting" role="status"><i></i><span>MetaMask bağlantısı bekleniyor.</span></div>
+
+        <dl class="facts">
+          <div><dt>Ağ</dt><dd>Base Sepolia · 84532</dd></div>
+          <div><dt>Bytecode</dt><dd>8.448 bayt</dd></div>
+          <div><dt>Test sonucu</dt><dd>20 / 20 başarılı</dd></div>
+          <div><dt>Bağlı hesap</dt><dd id="account">—</dd></div>
+        </dl>
+
+        <label class="evidence">
+          <span><input id="consent" type="checkbox"> Bunun denetlenmemiş bir test sözleşmesi olduğunu ve yalnız Base Sepolia test ETH kullanacağımı anlıyorum.</span>
+        </label>
+
+        <button id="deploy" class="primary">MetaMask’ı bağla →</button>
+        <a id="tx" class="tx hidden" target="_blank" rel="noreferrer">Dağıtım işlemini Basescan’de gör ↗</a>
+        <a id="contract" class="tx hidden" target="_blank" rel="noreferrer">V3.2 sözleşmesini Basescan’de aç ↗</a>
+      </section>
+
+      <aside class="notice">
+        <strong>Güvenlik sınırı</strong>
+        <p>Bu sayfa seed kelimesi veya özel anahtar istemez. MetaMask yalnız sözleşme dağıtım işlemini imzalar.</p>
+      </aside>
+    </main>
+    <script type="module" src="./v32-deploy.js"></script>
+  </body>
+</html>

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#07110e">
+    <title>Zinesh V3.1 · Base Sepolia Testi</title>
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="stylesheet" href="./style.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <a class="brand" href="/" aria-label="Zinesh ana sayfa">ZINESH</a>
+        <span class="network"><i></i> BASE SEPOLIA</span>
+      </header>
+
+      <section class="hero">
+        <p class="eyebrow">V3.1 · GERÇEK WEB3 TEST ORTAMI</p>
+        <h1>Anlaşma #1’e<br><em>zincirden devam et.</em></h1>
+        <p>Bu sayfa simülasyon değildir. İşlemler Base Sepolia test ağında, yalnızca değersiz test ETH ile gerçekleşir.</p>
+      </section>
+
+      <section class="card" aria-labelledby="agreement-title">
+        <div class="card-head">
+          <div>
+            <small>V3.1 SÖZLEŞMESİ</small>
+            <h2 id="agreement-title">Anlaşma #1</h2>
+          </div>
+          <a href="https://sepolia.basescan.org/address/0x2cc166931116226e9b110e044953361f8c0a775e" target="_blank" rel="noreferrer">Kontrat ↗</a>
+        </div>
+
+        <div id="status" class="status waiting" role="status">
+          <i></i><span>Cüzdan bağlantısı bekleniyor.</span>
+        </div>
+
+        <dl class="facts">
+          <div><dt>Bağlı hesap</dt><dd id="account">—</dd></div>
+          <div><dt>Rol</dt><dd id="role">—</dd></div>
+          <div><dt>Zincir durumu</dt><dd id="chain-state">—</dd></div>
+          <div><dt>Tutar</dt><dd id="amount">0.001 test ETH</dd></div>
+        </dl>
+
+        <div class="parties">
+          <div><span>ALICI</span><code>0x06f7945E…63b0b77c</code></div>
+          <div><span>SATICI</span><code>0x7db05Ee8…4FF24b2d</code></div>
+          <div><span>ÇÖZÜMLEYİCİ</span><code>0x2b2a276a…892Dc3e27</code></div>
+        </div>
+
+        <label id="evidence-wrap" class="evidence hidden">
+          Teslim kanıtı özeti
+          <textarea id="evidence">Zinesh V3.1 ilk Base Sepolia teslim kanıtı</textarea>
+        </label>
+
+        <button id="primary" class="primary">Cüzdanı bağla ve anlaşmayı aç →</button>
+        <button id="refresh" class="secondary">Zincir durumunu yenile</button>
+        <a id="last-tx" class="tx hidden" target="_blank" rel="noreferrer">Son işlemi Basescan’de gör ↗</a>
+      </section>
+
+      <section class="steps" aria-label="Emanet adımları">
+        <ol>
+          <li data-step="0"><i>1</i><span>Anlaşma oluşturuldu</span></li>
+          <li data-step="1"><i>2</i><span>İki taraf kabulü</span></li>
+          <li data-step="2"><i>3</i><span>Fonları kilitle</span></li>
+          <li data-step="3"><i>4</i><span>Kanıtı kaydet</span></li>
+          <li data-step="4"><i>5</i><span>Ödemeyi bırak</span></li>
+        </ol>
+      </section>
+
+      <aside class="notice">
+        <strong>Güvenlik sınırı</strong>
+        <p>Yalnız Base Sepolia kullanılır. Bu sayfa seed kelimesi, özel anahtar veya gerçek para istemez.</p>
+      </aside>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
