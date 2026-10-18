@@ -36,12 +36,12 @@ async function starfieldHeaderMark() {
   });
 }
 
-await squareLogo(512)
+await (await squareLogo(512))
   .png({ compressionLevel: 9 })
   .toFile(path.join(outDir, 'google-logo.png'));
 console.log('wrote google-logo.png');
 
-await squareLogo(1024)
+await (await squareLogo(1024))
   .png({ compressionLevel: 9 })
   .toFile(path.join(outDir, 'logo-1024.png'));
 console.log('wrote logo-1024.png');
@@ -54,7 +54,7 @@ if (fs.existsSync(ogSource)) {
     .toFile(path.join(outDir, 'og-image.jpg'));
   console.log('wrote og-image.jpg (from og-image-source.png)');
 } else {
-  await squareLogo(1024)
+  await (await squareLogo(1024))
     .jpeg({ quality: 92 })
     .toFile(path.join(outDir, 'og-image.jpg'));
   console.log('wrote og-image.jpg');
@@ -65,7 +65,7 @@ const pngBuffers = [];
 
 for (const size of sizes) {
   const file = path.join(outDir, `favicon-${size}x${size}.png`);
-  await squareLogo(size)
+  await (await squareLogo(size))
     .png({ compressionLevel: 9 })
     .toFile(file);
   console.log('wrote', path.basename(file));
@@ -74,7 +74,7 @@ for (const size of sizes) {
   }
 }
 
-await squareLogo(192)
+await (await squareLogo(192))
   .png()
   .toFile(path.join(outDir, 'favicon.png'));
 console.log('wrote favicon.png');
