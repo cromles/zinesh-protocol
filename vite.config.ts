@@ -51,6 +51,7 @@ export default defineConfig(() => ({
         main: path.resolve(__dirname, 'index.html'),
         blog: path.resolve(__dirname, 'blog/index.html'),
         teknikDokuman: path.resolve(__dirname, 'teknik-dokuman/index.html'),
+        web3Test: path.resolve(__dirname, 'web3-test/index.html'),
       },
       output: {
         manualChunks(id) {
