@@ -388,22 +388,34 @@ function zinesh_architecture_validation_detect_c5_event_gate_signals(string $api
 {
     $source = (string)file_get_contents($apiDir . '/trust_signal_runtime_lib.php');
     $violations = [];
+    $caseMatches = [];
     if (preg_match_all(
-        "/case\s+'(SIG-[A-Z]+-\d+)':[\s\S]*?zinesh_trust_signal_first_event_ts\s*\(\s*\\\$events/",
+        "/case\s+'(SIG-[A-Z]+-\d+)':/",
         $source,
-        $matches
+        $caseMatches,
+        PREG_OFFSET_CAPTURE
     )) {
-        foreach ($matches[1] as $sigId) {
-            $violations[] = $sigId;
-        }
-    }
-    if (preg_match_all(
-        "/case\s+'(SIG-[A-Z]+-\d+)':[\s\S]*?zinesh_trust_signal_deadline_missed\s*\([^)]*\\\$events/",
-        $source,
-        $matches2
-    )) {
-        foreach ($matches2[1] as $sigId) {
-            $violations[] = $sigId;
+        $caseCount = count($caseMatches[0]);
+        for ($index = 0; $index < $caseCount; $index++) {
+            $sigId = (string)$caseMatches[1][$index][0];
+            $start = (int)$caseMatches[0][$index][1] + strlen((string)$caseMatches[0][$index][0]);
+            $end = $index + 1 < $caseCount
+                ? (int)$caseMatches[0][$index + 1][1]
+                : strlen($source);
+            $caseBody = substr($source, $start, $end - $start);
+
+            $readsFirstEvent = preg_match(
+                "/zinesh_trust_signal_first_event_ts\s*\(\s*\\\$events/",
+                $caseBody
+            ) === 1;
+            $readsDeadlineEvents = preg_match(
+                "/zinesh_trust_signal_deadline_missed\s*\([^)]*\\\$events/",
+                $caseBody
+            ) === 1;
+
+            if ($readsFirstEvent || $readsDeadlineEvents) {
+                $violations[] = $sigId;
+            }
         }
     }
     return array_values(array_unique($violations));

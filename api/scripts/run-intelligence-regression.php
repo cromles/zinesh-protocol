@@ -209,6 +209,7 @@ function zinesh_intelligence_regression_run_command(string $command, string $cwd
     $stderr = '';
     $timedOut = false;
     $deadline = time() + $timeoutSeconds;
+    $lastStatus = null;
 
     while (true) {
         $read = [$pipes[1], $pipes[2]];
@@ -229,6 +230,7 @@ function zinesh_intelligence_regression_run_command(string $command, string $cwd
         }
 
         $status = proc_get_status($proc);
+        $lastStatus = $status;
         if (!$status['running']) {
             break;
         }
@@ -245,6 +247,15 @@ function zinesh_intelligence_regression_run_command(string $command, string $cwd
     fclose($pipes[2]);
 
     $exitCode = proc_close($proc);
+    if (
+        $exitCode === -1
+        && is_array($lastStatus)
+        && ($lastStatus['running'] ?? true) === false
+        && is_int($lastStatus['exitcode'] ?? null)
+        && $lastStatus['exitcode'] >= 0
+    ) {
+        $exitCode = $lastStatus['exitcode'];
+    }
     $executionMs = (int)round((hrtime(true) - $started) / 1_000_000);
 
     if ($timedOut) {
