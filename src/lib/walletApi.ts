@@ -1,4 +1,5 @@
 import type { UserProfile } from './userProfile';
+import type { EscrowJob, EscrowJobStats } from './trustProfileApi';
 import { getSession, getSessionToken, saveSession } from './auth';
 import { bumpSessionActivity } from './sessionIdle';
 import { FALLBACK_DEPOSIT_ADDRESSES, mergeDepositAddresses } from './depositAddresses';
@@ -85,13 +86,23 @@ function token(): string {
   return t;
 }
 
-async function postWallet(body: Record<string, unknown>): Promise<{
+interface WalletApiResponse {
   ok: boolean;
   message?: string;
   wallet?: WalletState;
   user?: UserProfile;
   withdrawal?: { id: string; txHash: string; status: string };
-}> {
+  isFounder?: boolean;
+  campaign?: CampaignProgress;
+  autoApproved?: boolean;
+  job?: EscrowJob;
+  matchCode?: string;
+  jobs?: EscrowJob[];
+  stats?: EscrowJobStats;
+  trustScore?: number;
+}
+
+async function postWallet(body: Record<string, unknown>): Promise<WalletApiResponse> {
   const session = getSession();
   const payload = {
     ...body,
@@ -135,7 +146,7 @@ async function postWallet(body: Record<string, unknown>): Promise<{
       saveSession({ ...prev, isFounder: Boolean(data.isFounder) });
     }
   }
-  return data as typeof data & { isFounder?: boolean };
+  return data as WalletApiResponse;
 }
 
 export async function fetchDepositAddresses(): Promise<
@@ -182,13 +193,12 @@ export async function fetchWalletState(): Promise<
 > {
   const data = await postWallet({ action: 'state', sessionToken: token() });
   if (!data.wallet) throw new Error('Cüzdan verisi alınamadı.');
-  const campaign = (data as { campaign?: CampaignProgress }).campaign;
-  const extra = data as { isFounder?: boolean };
+  const campaign = data.campaign;
   return {
     ...data.wallet,
     depositAddresses: mergeDepositAddresses(data.wallet.depositAddresses),
     campaign,
-    isFounder: extra.isFounder,
+    isFounder: data.isFounder,
   };
 }
 
@@ -216,7 +226,7 @@ export async function reportHavaleDeposit(
   return {
     wallet: data.wallet,
     message: data.message || 'Havale bildirimin alındı.',
-    autoApproved: Boolean((data as { autoApproved?: boolean }).autoApproved),
+    autoApproved: Boolean(data.autoApproved),
   };
 }
 
@@ -297,7 +307,7 @@ export interface CreateEscrowJobInput {
 
 export async function createEscrowJob(input: CreateEscrowJobInput): Promise<{
   wallet: WalletState;
-  job: import('./trustProfileApi').EscrowJob;
+  job: EscrowJob;
   matchCode?: string;
   message?: string;
 }> {
@@ -317,7 +327,7 @@ export async function createEscrowJob(input: CreateEscrowJobInput): Promise<{
   if (!data.wallet || !data.job) throw new Error('Emanet oluşturulamadı.');
   return {
     wallet: data.wallet,
-    job: data.job as import('./trustProfileApi').EscrowJob,
+    job: data.job,
     matchCode: typeof data.matchCode === 'string' ? data.matchCode : undefined,
     message: typeof data.message === 'string' ? data.message : undefined,
   };
@@ -325,7 +335,7 @@ export async function createEscrowJob(input: CreateEscrowJobInput): Promise<{
 
 export async function joinEscrowByCode(code: string): Promise<{
   wallet: WalletState;
-  job: import('./trustProfileApi').EscrowJob;
+  job: EscrowJob;
   message?: string;
 }> {
   const data = await postWallet({
@@ -336,14 +346,14 @@ export async function joinEscrowByCode(code: string): Promise<{
   if (!data.wallet || !data.job) throw new Error(data.message || 'Eşleşme başarısız.');
   return {
     wallet: data.wallet,
-    job: data.job as import('./trustProfileApi').EscrowJob,
+    job: data.job,
     message: typeof data.message === 'string' ? data.message : undefined,
   };
 }
 
 export async function fetchEscrowJobs(): Promise<{
-  jobs: import('./trustProfileApi').EscrowJob[];
-  stats: import('./trustProfileApi').EscrowJobStats;
+  jobs: EscrowJob[];
+  stats: EscrowJobStats;
   trustScore: number;
 }> {
   const data = await postWallet({
@@ -352,8 +362,8 @@ export async function fetchEscrowJobs(): Promise<{
   });
   if (!data.jobs) throw new Error('İş listesi alınamadı.');
   return {
-    jobs: data.jobs as import('./trustProfileApi').EscrowJob[],
-    stats: (data.stats as import('./trustProfileApi').EscrowJobStats) ?? {
+    jobs: data.jobs,
+    stats: data.stats ?? {
       active: 0,
       completed: 0,
       unsuccessful: 0,

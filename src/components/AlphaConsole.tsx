@@ -24,6 +24,7 @@ import {
 } from '../lib/walletApi';
 import { confirmEscrowComplete, requestEscrowRoomCancel } from '../lib/escrowRoomApi';
 import { getSession, refreshSession, getSessionToken } from '../lib/auth';
+import type { UserProfile } from '../lib/userProfile';
 import { FALLBACK_DEPOSIT_ADDRESSES, mergeDepositAddresses } from '../lib/depositAddresses';
 import {
   VERIFICATION_PROFILE_ANCHORS,
@@ -37,32 +38,8 @@ interface AlphaConsoleProps {
   onBrowseLanding: () => void;
   onLogout: () => void;
   onSessionExpired?: () => void;
-  onUserUpdate?: (user: import('../lib/firebase').UserProfile) => void;
-  registeredUser?: {
-    name: string;
-    email: string;
-    role: 'web3' | 'real' | 'dual';
-    ticketNumber: string;
-    trustScore?: number;
-    usdtBalance?: number;
-    walletAddress?: string;
-    emailVerified?: boolean;
-    sessionToken?: string;
-    uid?: string;
-    isFounder?: boolean;
-    foundingMember?: boolean;
-    foundingMemberNumber?: number;
-    kycStatus?: string;
-    phoneVerified?: boolean;
-    phoneMasked?: string;
-    kycVerified?: boolean;
-    referralCode?: string;
-    createdAt?: string;
-    jobHistoryPublic?: boolean;
-    googleLinked?: boolean;
-    totpEnabled?: boolean;
-    signupRewardAmount?: number;
-  };
+  onUserUpdate?: (user: UserProfile) => void;
+  registeredUser?: UserProfile;
 }
 
 type ActivePane = ConsolePaneId;
@@ -77,7 +54,7 @@ export default function AlphaConsole({
   const [isFounder, setIsFounder] = useState(() => Boolean(registeredUser?.isFounder));
 
   const emailVerified = registeredUser?.emailVerified ?? false;
-  const kycStatus = (registeredUser?.kycStatus as string) ?? 'none';
+  const kycStatus = registeredUser?.kycStatus ?? 'none';
   const sessionToken = registeredUser?.sessionToken ?? getSessionToken();
   const [flashToast, setFlashToast] = useState<string | null>(null);
 

@@ -113,7 +113,7 @@ export default function NotificationBar({
   const panelRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const prevOkunmamis = useRef<number | null>(null);
-  const shakeTimer = useRef<ReturnType<typeof window.setTimeout> | undefined>(undefined);
+  const shakeTimer = useRef<number | undefined>(undefined);
 
   const triggerShake = useCallback(() => {
     setShaking(true);
