@@ -549,6 +549,14 @@ function zinesh_oauth_google_login_or_register_identity(
     $existing = zinesh_find_user_by_email($email);
     $isNew = $existing === null;
 
+    if ($isNew && !zinesh_registration_is_open()) {
+        return [
+            'ok' => false,
+            'code' => 'registration_closed',
+            'message' => 'Yeni kullanıcı kaydı şu anda kapalı.',
+        ];
+    }
+
     if ($isNew) {
         $profile = zinesh_oauth_default_user_profile($email, (string)($identity['name'] ?? ''), $googleSub);
         $referralCodeInput = strtoupper(trim($referralCodeInput));

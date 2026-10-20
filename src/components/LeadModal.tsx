@@ -23,6 +23,7 @@ import ZineshFrame from './ZineshFrame';
 import { apiUrl } from '../lib/apiBase';
 import { displayMemberTicket } from '../lib/memberTicket';
 import { fetchDemoStatus, loginDemoRole, isDemoUiEnabled, type DemoRole } from '../lib/demoMode';
+import { REGISTRATION_OPEN } from '../config/registration';
 
 function parseTotpSetupSecret(uri: string | null): string | null {
   if (!uri) return null;
@@ -165,7 +166,7 @@ export default function LeadModal({
   oauthLinkEmail = '',
   onOAuthParamsConsumed,
 }: LeadModalProps) {
-  const [activeTab, setActiveTab] = useState<'register' | 'login'>('register');
+  const [activeTab, setActiveTab] = useState<'register' | 'login'>('login');
   const [step, setStep] = useState<'form' | 'loading' | 'ticket'>('form');
   const [loadingMode, setLoadingMode] = useState<'register' | 'login'>('login');
   
@@ -224,7 +225,7 @@ export default function LeadModal({
   useEffect(() => {
     if (!isOpen) return;
     const code = normalizeReferralCode(initialReferralCode);
-    if (code || referralInvite) {
+    if (REGISTRATION_OPEN && (code || referralInvite)) {
       if (code) setReferralCode(code);
       setActiveTab('register');
       setStep('form');
@@ -234,7 +235,7 @@ export default function LeadModal({
 
   useEffect(() => {
     if (!isOpen || !preferredAuthTab) return;
-    setActiveTab(preferredAuthTab);
+    setActiveTab(preferredAuthTab === 'register' && !REGISTRATION_OPEN ? 'login' : preferredAuthTab);
     setShowForgotPassword(false);
   }, [isOpen, preferredAuthTab]);
 
@@ -499,6 +500,11 @@ export default function LeadModal({
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!REGISTRATION_OPEN) {
+      setActiveTab('login');
+      setErrorMsg('Yeni kullanıcı kaydı şu anda kapalı. Mevcut hesabınla giriş yapabilirsin.');
+      return;
+    }
     if (!email || !name || !password) {
       setErrorMsg('Lütfen tüm zorunlu alanları doldurunuz.');
       return;
@@ -837,22 +843,24 @@ export default function LeadModal({
               {/* Login / Register Tab Selectors */}
               {!showForgotPassword && (
               <div className="flex rounded-xl border border-slate-800 bg-slate-950/80 p-1" role="tablist" aria-label="Giriş türü">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={activeTab === 'register'}
-                  onClick={() => {
-                    setActiveTab('register');
-                    setErrorMsg('');
-                  }}
-                  className={`flex-1 min-h-[44px] cursor-pointer rounded-lg py-2.5 font-sans text-xs font-semibold tracking-wide transition-all ${
-                    activeTab === 'register'
-                      ? 'bg-emerald-500 text-slate-950 shadow-md'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  Kayıt Ol
-                </button>
+                {REGISTRATION_OPEN && (
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === 'register'}
+                    onClick={() => {
+                      setActiveTab('register');
+                      setErrorMsg('');
+                    }}
+                    className={`flex-1 min-h-[44px] cursor-pointer rounded-lg py-2.5 font-sans text-xs font-semibold tracking-wide transition-all ${
+                      activeTab === 'register'
+                        ? 'bg-emerald-500 text-slate-950 shadow-md'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Kayıt Ol
+                  </button>
+                )}
                 <button
                   type="button"
                   role="tab"

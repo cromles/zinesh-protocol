@@ -109,6 +109,14 @@ $input = zinesh_input();
 $action = (string)($input['action'] ?? '');
 $limits = zinesh_config()['rate_limits'] ?? [];
 
+if ($action === 'register' && !zinesh_registration_is_open()) {
+    zinesh_json_response([
+        'ok' => false,
+        'code' => 'registration_closed',
+        'message' => 'Yeni kullanıcı kaydı şu anda kapalı.',
+    ], 403);
+}
+
 if ($action === 'oauth_config') {
     zinesh_json_response([
         'ok' => true,
@@ -269,7 +277,11 @@ if ($action === 'oauth_google') {
                 'message' => $result['message'] ?? '2FA doğrulaması gerekli.',
             ], 401);
         }
-        zinesh_json_response(['message' => $result['message'] ?? 'Google ile giriş başarısız.'], 401);
+        $code = (string)($result['code'] ?? '');
+        zinesh_json_response([
+            'message' => $result['message'] ?? 'Google ile giriş başarısız.',
+            'code' => $code !== '' ? $code : null,
+        ], $code === 'registration_closed' ? 403 : 401);
     }
     zinesh_json_response([
         'ok' => true,
@@ -314,7 +326,11 @@ if ($action === 'oauth_google_access') {
                 'message' => $result['message'] ?? '2FA doğrulaması gerekli.',
             ], 401);
         }
-        zinesh_json_response(['message' => $result['message'] ?? 'Google ile giriş başarısız.'], 401);
+        $code = (string)($result['code'] ?? '');
+        zinesh_json_response([
+            'message' => $result['message'] ?? 'Google ile giriş başarısız.',
+            'code' => $code !== '' ? $code : null,
+        ], $code === 'registration_closed' ? 403 : 401);
     }
     zinesh_json_response([
         'ok' => true,

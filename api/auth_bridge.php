@@ -18,6 +18,8 @@ $_SERVER['REMOTE_ADDR'] = getenv('ZINESH_CLIENT_IP') ?: '127.0.0.1';
 stream_wrapper_unregister('php');
 
 final class ZineshPhpInputWrapper {
+    /** PHP stream wrapper API tarafından çalışma anında atanır. */
+    public mixed $context = null;
     private static string $body = '';
     private int $pos = 0;
 

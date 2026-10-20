@@ -6,6 +6,9 @@ return [
     /** Staging / localhost demo — production'da asla true yapmayın */
     // 'demo_mode' => true,
 
+    /** Yeni hesap oluşturmayı yalnızca planlı yeniden açılışta true yapın. */
+    // 'registration_open' => false,
+
     /*
      * SMTP (önerilen: Brevo / SendGrid)
      * Güvenli yol: php setup_mail.php ile server_secrets.json'a yazın (şifre repoda kalmasın).
