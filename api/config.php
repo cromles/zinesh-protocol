@@ -16,6 +16,9 @@ return [
      */
     'deposits_enabled' => false,
 
+    /** Yeni hesap oluşturma kapısı. Mevcut giriş ve oturumlar bundan etkilenmez. */
+    'registration_open' => false,
+
     /**
      * TL havale yatırma — IBAN config.local.php içinde doldurulmalı.
      * Test: kurucu hesabında auto_approve_founder ile anında bakiye.

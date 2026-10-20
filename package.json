@@ -22,6 +22,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
+    "test:registration-security": "node scripts/registration-security-static-test.mjs",
     "test:risk-engine-frontend": "tsx scripts/e2e-risk-engine-frontend-test.ts",
     "test:trust-timeline-frontend": "tsx scripts/e2e-trust-timeline-frontend-test.ts",
     "test:copilot": "tsx scripts/e2e-copilot-framework-test.ts",

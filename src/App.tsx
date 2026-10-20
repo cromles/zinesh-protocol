@@ -22,6 +22,7 @@ import {
 import { bindSessionInactivityTimeout } from './lib/sessionIdle';
 import { clearPendingReferralCode, normalizeReferralCode, readPendingReferralCode, storePendingReferralCode } from './lib/referral';
 import { emitZineshEvent } from './lib/zineshEvents';
+import { REGISTRATION_OPEN } from './config/registration';
 
 const AlphaConsole = lazy(() => import('./components/AlphaConsole'));
 const LeadModal = lazy(() => import('./components/LeadModal'));
@@ -42,7 +43,7 @@ function ConsoleLoadingScreen() {
 
 export default function App() {
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
-  const [leadModalTab, setLeadModalTab] = useState<'login' | 'register'>('register');
+  const [leadModalTab, setLeadModalTab] = useState<'login' | 'register'>('login');
   const [viewMode, setViewMode] = useState<'landing' | 'alpha'>('landing');
   const [registeredUser, setRegisteredUser] = useState<UserProfile | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
@@ -64,7 +65,7 @@ export default function App() {
       emitZineshEvent('referral_landing', { ref });
       const url = new URL(window.location.href);
       url.searchParams.delete('ref');
-      if (!url.hash) url.hash = 'kayit';
+      if (REGISTRATION_OPEN && !url.hash) url.hash = 'kayit';
       window.history.replaceState({}, '', url.pathname + url.search + url.hash);
     } else {
       const stored = readPendingReferralCode();
@@ -228,7 +229,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (loadingSession || !referralInvitePending || !pendingReferralCode) return;
+    if (!REGISTRATION_OPEN || loadingSession || !referralInvitePending || !pendingReferralCode) return;
 
     const hasSession = !!registeredUser?.sessionToken || !!getSessionToken();
     if (hasSession) {
@@ -375,7 +376,7 @@ export default function App() {
       handleGoToConsole();
       return;
     }
-    setLeadModalTab('register');
+    setLeadModalTab(REGISTRATION_OPEN ? 'register' : 'login');
     setIsLeadModalOpen(true);
   };
 

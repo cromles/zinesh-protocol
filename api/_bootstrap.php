@@ -63,6 +63,11 @@ function zinesh_config(): array {
     return $cfg;
 }
 
+function zinesh_registration_is_open(): bool
+{
+    return (zinesh_config()['registration_open'] ?? false) === true;
+}
+
 function zinesh_resolve_data_dir(): string {
     $simDir = getenv('ZINESH_SIM_DATA_DIR');
     if (is_string($simDir) && $simDir !== '') {

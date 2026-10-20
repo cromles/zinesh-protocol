@@ -3,6 +3,7 @@ import { Menu, X, ArrowRight, ChevronDown, LogOut, LayoutDashboard } from 'lucid
 import ZineshLogo from './ZineshLogo';
 import ThemeToggle from './ThemeToggle';
 import { displayMemberTicket } from '../lib/memberTicket';
+import { REGISTRATION_OPEN } from '../config/registration';
 
 interface HeaderProps {
   isLoggedIn?: boolean;
@@ -168,17 +169,19 @@ export default function Header({
       >
         Giriş Yap
       </button>
-      <button
-        onClick={onRegisterClick}
-        id="header-cta-btn"
-        type="button"
-        aria-label="Kayıt ol"
-        className="group relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full bg-emerald-400 px-5 py-2 font-sans text-sm font-semibold text-slate-950 shadow-md shadow-emerald-950/30 transition-all hover:bg-emerald-300"
-      >
-        <span className="relative z-10 flex items-center gap-1.5">
-          Kayıt Ol <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
-        </span>
-      </button>
+      {REGISTRATION_OPEN && (
+        <button
+          onClick={onRegisterClick}
+          id="header-cta-btn"
+          type="button"
+          aria-label="Kayıt ol"
+          className="group relative flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full bg-emerald-400 px-5 py-2 font-sans text-sm font-semibold text-slate-950 shadow-md shadow-emerald-950/30 transition-all hover:bg-emerald-300"
+        >
+          <span className="relative z-10 flex items-center gap-1.5">
+            Kayıt Ol <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+          </span>
+        </button>
+      )}
     </div>
   );
 
@@ -294,7 +297,7 @@ export default function Header({
                     )}
                   </>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className={REGISTRATION_OPEN ? 'grid grid-cols-2 gap-2' : ''}>
                     <button
                       type="button"
                       onClick={() => {
@@ -305,16 +308,18 @@ export default function Header({
                     >
                       Giriş Yap
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        onRegisterClick();
-                      }}
-                      className="flex w-full items-center justify-center rounded-full bg-emerald-400 px-4 py-3 font-semibold text-slate-950"
-                    >
-                      Kayıt Ol
-                    </button>
+                    {REGISTRATION_OPEN && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          onRegisterClick();
+                        }}
+                        className="flex w-full items-center justify-center rounded-full bg-emerald-400 px-4 py-3 font-semibold text-slate-950"
+                      >
+                        Kayıt Ol
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
