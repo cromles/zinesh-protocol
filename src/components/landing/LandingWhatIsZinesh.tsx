@@ -1,6 +1,16 @@
 import { ArrowRight, CheckCircle, Eye, FileText, Lock, RefreshCw, Scale, ShieldCheck } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-const STEPS = [
+interface ProtocolStep {
+  num: string;
+  title: string;
+  body: string;
+  icon: LucideIcon;
+  tag: string;
+  highlight?: boolean;
+}
+
+const STEPS: readonly ProtocolStep[] = [
   {
     num: '01',
     title: 'Dışarıda anlaşın',
@@ -37,7 +47,7 @@ const STEPS = [
     tag: 'Kapanış',
     highlight: true,
   },
-] as const;
+];
 
 export default function LandingWhatIsZinesh() {
   return (
